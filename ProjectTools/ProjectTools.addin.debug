@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RevitAddIns>
+	<AddIn Type="Application">
+		<Name>Just for fun</Name>
+		<Assembly>C:\Users\o.sidorin\source\repos\ProjectTools\ProjectTools\bin\Debug\ProjectTools.dll</Assembly>
+		<AddInId>72CDCC21-EC30-4443-B25B-E90FD41EB58E</AddInId>
+		<FullClassName>ProjectTools.Main</FullClassName>
+		<VendorId>M1</VendorId>
+		<VendorDescription>Такая фирма, что еще сказать..</VendorDescription>
+	</AddIn>
+</RevitAddIns>
