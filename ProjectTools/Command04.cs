@@ -16,7 +16,7 @@ using View = Autodesk.Revit.DB.View;
 namespace ProjectTools
 {
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-    class Command03 : IExternalCommand
+    class Command04 : IExternalCommand
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -25,10 +25,9 @@ namespace ProjectTools
 
             #region Add Parameter M1_MEP System
             CategorySet catSet = commandData.Application.Application.Create.NewCategorySet();
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlumbingFixtures));
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeCurves));
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeAccessory));
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeFitting));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctCurves));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctAccessory));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting));
             catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_MechanicalEquipment));
 
             try
@@ -43,14 +42,12 @@ namespace ProjectTools
             #endregion
 
             List<Element> allElements = new List<Element>();
-            var pipes = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeCurves).ToList();
-            pipes.ForEach(x => allElements.Add(x));
-            var pipeAccessories = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeAccessory).ToList();
-            pipeAccessories.ForEach(x => allElements.Add(x));
-            var pipeFittings = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeFitting).ToList();
-            pipeFittings.ForEach(x => allElements.Add(x));
-            var plumbingFixtures = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PlumbingFixtures).ToList();
-            plumbingFixtures.ForEach(x => allElements.Add(x));
+            var ductCurves = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves).ToList();
+            ductCurves.ForEach(x => allElements.Add(x));
+            var ductAccessory = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctAccessory).ToList();
+            ductAccessory.ForEach(x => allElements.Add(x));
+            var ductFittings = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctFitting).ToList();
+            ductFittings.ForEach(x => allElements.Add(x));
             var mechanicalEquipment = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_MechanicalEquipment).ToList();
             mechanicalEquipment.ForEach(x => allElements.Add(x));
 
@@ -75,11 +72,11 @@ namespace ProjectTools
                         catch { };
                     }
                 }
-                
+
             }
 
             var messList = new FilteredElementCollector(doc)
-                .OfCategory(BuiltInCategory.OST_PipeCurves)
+                .OfCategory(BuiltInCategory.OST_DuctCurves)
                 .WhereElementIsNotElementType()
                 .Cast<MEPCurve>()
                 .ToList();
@@ -96,7 +93,7 @@ namespace ProjectTools
                     viewList.Add(view);
             }
 
-            
+
             var elementIdsToHide = GetDistinctElementIdList(GetAllElementIds(doc));
 
             foreach (var view in viewList)
@@ -104,7 +101,7 @@ namespace ProjectTools
                 SetView(view, doc, elementIdsToHide);
                 CreateViewFilter(doc, view, view.Name);
             }
-            
+
             return Result.Succeeded;
         }
 
@@ -224,7 +221,7 @@ namespace ProjectTools
 
             }
             catch { };
-            
+
             return view;
         }
         private void SetView(View3D activeView3D, Document doc, List<ElementId> hideList)
@@ -235,7 +232,7 @@ namespace ProjectTools
 
                 try
                 {
-                    activeView3D.LookupParameter("ADSK_Назначение вида").Set("Схема труб");
+                    activeView3D.LookupParameter("ADSK_Назначение вида").Set("Схема вентиляции");
                 }
                 catch (Exception ex)
                 {
@@ -243,8 +240,8 @@ namespace ProjectTools
                 }
 
                 activeView3D.Discipline = ViewDiscipline.Mechanical;
-                activeView3D.DetailLevel = ViewDetailLevel.Coarse;
-                activeView3D.DisplayStyle = DisplayStyle.Wireframe;
+                activeView3D.DetailLevel = ViewDetailLevel.Medium;
+                activeView3D.DisplayStyle = DisplayStyle.HLR;
 
                 IList<Parameter> p1List = activeView3D.GetParameters(name: "М1_Группа вида");
                 IList<Parameter> p2List = activeView3D.GetParameters(name: "М1_Подгруппа вида");
@@ -258,12 +255,12 @@ namespace ProjectTools
                 if (p2List != null)
                     foreach (var p in p2List)
                         if (!p.IsReadOnly)
-                            p.Set("Схемы труб");
+                            p.Set("Схемы вентиляции");
 
                 if (p3List != null)
                     foreach (var p in p2List)
                         if (!p.IsReadOnly)
-                            p.Set("Схемы труб");
+                            p.Set("Схемы вентиляции");
 
                 activeView3D.AreImportCategoriesHidden = true;
                 activeView3D.AreAnalyticalModelCategoriesHidden = true;
@@ -277,18 +274,15 @@ namespace ProjectTools
                 // переводит временно скрытые категории в постоянные
                 activeView3D.ConvertTemporaryHideIsolateToPermanent();
 
-                FilteredElementCollector pipeCurves = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeCurves);
+                FilteredElementCollector pipeCurves = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves);
                 if (pipeCurves.Count() != 0)
                     activeView3D.SetCategoryHidden(pipeCurves.FirstElement().Category.Id, false);
-                FilteredElementCollector pipeAcc = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeAccessory);
+                FilteredElementCollector pipeAcc = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctAccessory);
                 if (pipeAcc.Count() != 0)
                     activeView3D.SetCategoryHidden(pipeAcc.FirstElement().Category.Id, false);
-                FilteredElementCollector pipeFit = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeFitting);
+                FilteredElementCollector pipeFit = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctFitting);
                 if (pipeFit.Count() != 0)
                     activeView3D.SetCategoryHidden(pipeFit.FirstElement().Category.Id, false);
-                FilteredElementCollector plumFix = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PlumbingFixtures);
-                if (plumFix.Count() != 0)
-                    activeView3D.SetCategoryHidden(plumFix.FirstElement().Category.Id, false);
                 FilteredElementCollector mechEq = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_MechanicalEquipment);
                 if (mechEq.Count() != 0)
                     activeView3D.SetCategoryHidden(mechEq.FirstElement().Category.Id, false);
@@ -316,10 +310,9 @@ namespace ProjectTools
         public static void CreateViewFilter(Document doc, View view, string value)
         {
             List<ElementId> categories = new List<ElementId>();
-            categories.Add(new ElementId(BuiltInCategory.OST_PipeCurves));
-            categories.Add(new ElementId(BuiltInCategory.OST_PipeAccessory));
-            categories.Add(new ElementId(BuiltInCategory.OST_PipeFitting));
-            categories.Add(new ElementId(BuiltInCategory.OST_PlumbingFixtures));
+            categories.Add(new ElementId(BuiltInCategory.OST_DuctCurves));
+            categories.Add(new ElementId(BuiltInCategory.OST_DuctAccessory));
+            categories.Add(new ElementId(BuiltInCategory.OST_DuctFitting));
             categories.Add(new ElementId(BuiltInCategory.OST_MechanicalEquipment));
             List<FilterRule> filterRules = new List<FilterRule>();
 
@@ -344,12 +337,12 @@ namespace ProjectTools
                 Guid spGuid = new Guid("ff5da4f2-129e-4ae6-ad78-8ac062fe377a"); // М1_MEP система
 
 
-                var pipes = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeCurves).ToList();
+                var ducts = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves).ToList();
                 //var pipeAccessories = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeAccessory).ToList();
                 //var pipeFittings = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeFitting).ToList();
                 //var plumbingFixtures = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PlumbingFixtures).ToList();
 
-                Element el = pipes.First();
+                Element el = ducts.First();
 
                 if (el != null)
                 {

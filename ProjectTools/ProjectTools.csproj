@@ -68,12 +68,14 @@
     <Compile Include="Command01.cs" />
     <Compile Include="Command02.cs" />
     <Compile Include="Command03.cs" />
+    <Compile Include="Command04.cs" />
     <Compile Include="FilePathViewModel.cs" />
     <Compile Include="FlowDocumentForReport.cs" />
     <Compile Include="FOP.cs" />
     <Compile Include="JtFamilyLoadOptions.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="ParameterAndFamily.cs" />
+    <Compile Include="ParameterViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReportWindow.xaml.cs">
       <DependentUpon>ReportWindow.xaml</DependentUpon>
@@ -81,6 +83,9 @@
     <Compile Include="WrongParameter.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="res\duct-icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="res\fp-icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -91,6 +96,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="res\icons8-piping.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\pipe-icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="res\ФОП2019.txt">

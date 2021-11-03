@@ -50,13 +50,23 @@ namespace ProjectTools
             var WorkSetRVTLinksBtn = panel.AddItem(WorkSetRVTLinksBtnData) as PushButton;
             WorkSetRVTLinksBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-layers.png", UriKind.Absolute));
 
+            var NewDuctViewsBtnData = new PushButtonData("NewDuctViewsBtnData", "Создать\nвиды", DllLocation, "ProjectTools.Command04")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\duct-icon.png", UriKind.Absolute)),
+                ToolTip = "Создает виды для вент коробов как в АДСК шаблоне"
+            };
+            var NewDuctViewsBtn = panel.AddItem(NewDuctViewsBtnData) as PushButton;
+            NewDuctViewsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\duct-icon.png", UriKind.Absolute));
+
             var NewPipeViewsBtnData = new PushButtonData("NewPipeViewsBtnData", "Создать\nвиды", DllLocation, "ProjectTools.Command03")
             {
-                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-piping.png", UriKind.Absolute)),
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\pipe-icon.png", UriKind.Absolute)),
                 ToolTip = "Создает виды для труб как в АДСК шаблоне"
             };
             var NewPipeViewsBtn = panel.AddItem(NewPipeViewsBtnData) as PushButton;
-            NewPipeViewsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-piping.png", UriKind.Absolute));
+            NewPipeViewsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\pipe-icon.png", UriKind.Absolute));
+
+            
 
             //PushButtonData ButtonDataQ = new PushButtonData("ButtonDataQ", "Проверить\nпараметры", DllLocation, "FamilyParametersChanger.MainCommandQ")
             //{
