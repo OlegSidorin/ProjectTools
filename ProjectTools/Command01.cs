@@ -18,6 +18,7 @@ namespace ProjectTools
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
     class Command01 : IExternalCommand
     {
+        // Создает 3Д вид и называет его Navisworks
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             //commandData.Application.Application.SharedParametersFilename = FOP.PathToFOP;

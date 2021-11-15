@@ -36,11 +36,19 @@ namespace ProjectTools
 
             var CreateBIM360ViewBtnData = new PushButtonData("CreateBIM360BtnData", "Создать вид\nNavisworks", DllLocation, "ProjectTools.Command01")
             {
-                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-home.png", UriKind.Absolute)),
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\navis-view-plus-3.png", UriKind.Absolute)),
                 ToolTip = "Создает вид Navisworks, \nвыгружает ссылки,\nготовит набор к публикации в BIM360"
             };
             var CreateBIM360ViewBtn = panel.AddItem(CreateBIM360ViewBtnData) as PushButton;
-            CreateBIM360ViewBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-home.png", UriKind.Absolute));
+            CreateBIM360ViewBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\navis-view-plus-3.png", UriKind.Absolute));
+
+            var ShowBIM360ViewBtnData = new PushButtonData("ShowBIM360BtnData", "Показать вид\nNavisworks", DllLocation, "ProjectTools.Command01a")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\navis-view-3.png", UriKind.Absolute)),
+                ToolTip = "Покажет вид Navisworks"
+            };
+            var ShowBIM360ViewBtn = panel.AddItem(ShowBIM360ViewBtnData) as PushButton;
+            ShowBIM360ViewBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\navis-view-3.png", UriKind.Absolute));
 
             var WorkSetRVTLinksBtnData = new PushButtonData("WorkSetRVTLinksBtnData", "Разместить в\nрабочих наб", DllLocation, "ProjectTools.Command02")
             {
@@ -50,7 +58,7 @@ namespace ProjectTools
             var WorkSetRVTLinksBtn = panel.AddItem(WorkSetRVTLinksBtnData) as PushButton;
             WorkSetRVTLinksBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-layers.png", UriKind.Absolute));
 
-            var NewDuctViewsBtnData = new PushButtonData("NewDuctViewsBtnData", "Создать\nвиды", DllLocation, "ProjectTools.Command04")
+            var NewDuctViewsBtnData = new PushButtonData("NewDuctViewsBtnData", "Создать\nсхемы", DllLocation, "ProjectTools.Command04")
             {
                 ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\duct-icon.png", UriKind.Absolute)),
                 ToolTip = "Создает виды для вент коробов как в АДСК шаблоне"
@@ -58,13 +66,45 @@ namespace ProjectTools
             var NewDuctViewsBtn = panel.AddItem(NewDuctViewsBtnData) as PushButton;
             NewDuctViewsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\duct-icon.png", UriKind.Absolute));
 
-            var NewPipeViewsBtnData = new PushButtonData("NewPipeViewsBtnData", "Создать\nвиды", DllLocation, "ProjectTools.Command03")
+            var NewPipeViewsBtnData = new PushButtonData("NewPipeViewsBtnData", "Создать\nсхемы", DllLocation, "ProjectTools.Command03")
             {
                 ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\pipe-icon.png", UriKind.Absolute)),
                 ToolTip = "Создает виды для труб как в АДСК шаблоне"
             };
             var NewPipeViewsBtn = panel.AddItem(NewPipeViewsBtnData) as PushButton;
             NewPipeViewsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\pipe-icon.png", UriKind.Absolute));
+
+            var ZeroBtnData = new PushButtonData("ZeroBtnData", "Линии\nцентр", DllLocation, "ProjectTools.Command08")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\zero-point.png", UriKind.Absolute)),
+                ToolTip = "Создает в нуле линии"
+            };
+            var ZeroBtn = panel.AddItem(ZeroBtnData) as PushButton;
+            ZeroBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\zero-point.png", UriKind.Absolute));
+
+            var SetViewAngleBtnData = new PushButtonData("SetViewAngleBtnData", "Установить\nориентацию", DllLocation, "ProjectTools.Command06")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\axes-icon.png", UriKind.Absolute)),
+                ToolTip = "Создает ориентацию вида в пространстве"
+            };
+            var SetViewAngleBtn = panel.AddItem(SetViewAngleBtnData) as PushButton;
+            SetViewAngleBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\axes-icon.png", UriKind.Absolute));
+
+            var WorkPlaneBtnData = new PushButtonData("WorkPlaneBtnData", "Создать\nплоскость", DllLocation, "ProjectTools.Command05")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\section-view.png", UriKind.Absolute)),
+                ToolTip = "Создает рабочую плоскость по активному виду"
+            };
+            var WorkPlaneBtn = panel.AddItem(WorkPlaneBtnData) as PushButton;
+            WorkPlaneBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\section-view.png", UriKind.Absolute));
+
+            var FilesListBtnData = new PushButtonData("FilesListBtnData", "Список\nфайлов", DllLocation, "ProjectTools.Command07")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\folders-icon.png", UriKind.Absolute)),
+                ToolTip = "Создает список файлов из указанной папки"
+            };
+            var FilesListBtn = panel.AddItem(FilesListBtnData) as PushButton;
+            FilesListBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\folders-icon.png", UriKind.Absolute));
 
             
 

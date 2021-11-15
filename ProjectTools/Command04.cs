@@ -18,28 +18,13 @@ namespace ProjectTools
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
     class Command04 : IExternalCommand
     {
+        // Готовит виды схемы для вентиляции по количеству систем в проекте
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIDocument uiDoc = commandData.Application.ActiveUIDocument;
             Document doc = uiDoc.Document;
 
-            #region Add Parameter M1_MEP System
-            CategorySet catSet = commandData.Application.Application.Create.NewCategorySet();
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctCurves));
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctAccessory));
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting));
-            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_MechanicalEquipment));
-
-            try
-            {
-                ParameterViewModel pvm = new ParameterViewModel()
-                {
-                    Name = "М1_MEP система"
-                };
-                pvm.AddSharedParameterIntoProject(commandData, doc, catSet, BuiltInParameterGroup.PG_MECHANICAL);
-            }
-            catch { };
-            #endregion
+            FOP.AddSharedParameter_M1_MEP_System(commandData);
 
             List<Element> allElements = new List<Element>();
             var ductCurves = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves).ToList();
@@ -51,20 +36,52 @@ namespace ProjectTools
             var mechanicalEquipment = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_MechanicalEquipment).ToList();
             mechanicalEquipment.ForEach(x => allElements.Add(x));
 
-
+            List<string> messStrings = new List<string>();
             foreach (var el in allElements)
             {
                 if (el != null)
                 {
                     Parameter p = el.get_Parameter(BuiltInParameter.RBS_SYSTEM_NAME_PARAM);
+
                     if (p != null)
                     {
+                        string pValue = "";
+                        pValue = p.AsString();
+                        if (!string.IsNullOrEmpty(pValue)) messStrings.Add(pValue);
+                        if (!string.IsNullOrEmpty(pValue))
+                        {
+                            if (pValue.Contains(","))
+                            {
+                                string[] ss = pValue.Split(',');
+                                string newS = "";
+                                foreach (string item in ss)
+                                {
+                                    int sIndex = 0;
+                                    sIndex = item.IndexOf(" ");
+                                    if (sIndex != 0)
+                                    {
+                                        newS += item.Substring(0, sIndex) + ",";
+                                    }
+                                }
+                                pValue = newS.Substring(0, newS.Length - 1);
+                            }
+                            else
+                            {
+                                int spaceIndex = 0;
+                                spaceIndex = pValue.IndexOf(" "); // string[] words = s.Split(new char[] { ' ' });
+                                if (spaceIndex != 0)
+                                {
+                                    pValue = pValue.Substring(0, spaceIndex);
+                                }
+                            }
+
+                        }
                         try
                         {
                             using (Transaction tr = new Transaction(doc, "Set parameter M1"))
                             {
                                 tr.Start();
-                                el.LookupParameter("М1_MEP система").Set(p.AsString());
+                                el.LookupParameter("М1_MEP система").Set(pValue);
                                 tr.Commit();
                             }
 
@@ -75,15 +92,11 @@ namespace ProjectTools
 
             }
 
-            var messList = new FilteredElementCollector(doc)
-                .OfCategory(BuiltInCategory.OST_DuctCurves)
-                .WhereElementIsNotElementType()
-                .Cast<MEPCurve>()
-                .ToList();
+            var mepSystemNames = GetDistinctStringList(messStrings);
 
+            var mepSystemNames_FirstPart = GetFirstPartStringList(mepSystemNames);
 
-
-            var mepSystemNames = GetDistinctStringList(messList);
+            mepSystemNames = GetDistinctStringList(mepSystemNames_FirstPart);
 
             var viewList = new List<View3D>();
             foreach (var item in mepSystemNames)
@@ -96,15 +109,64 @@ namespace ProjectTools
 
             var elementIdsToHide = GetDistinctElementIdList(GetAllElementIds(doc));
 
+            DisplayStyle displayStyle = DisplayStyle.HLR;
+            ViewDetailLevel viewDetailLevel = ViewDetailLevel.Medium;
+
+            try
+            {
+                displayStyle = doc.ActiveView.DisplayStyle;
+                viewDetailLevel = doc.ActiveView.DetailLevel;
+            }
+            catch { };
+
             foreach (var view in viewList)
             {
-                SetView(view, doc, elementIdsToHide);
+                SetView(view, doc, elementIdsToHide, viewDetailLevel, displayStyle);
                 CreateViewFilter(doc, view, view.Name);
             }
 
             return Result.Succeeded;
         }
+        private List<string> GetFirstPartStringList(List<string> inputList)
+        {
+            List<string> outputList = new List<string>();
+            foreach (string s in inputList)
+            {
+                if (s != null)
+                {
+                    if (s.Contains(","))
+                    {
+                        string[] ss = s.Split(',');
+                        string newS = "";
+                        foreach (string item in ss)
+                        {
+                            int sIndex = 0;
+                            sIndex = item.IndexOf(" ");
+                            if (sIndex != 0)
+                            {
+                                newS += item.Substring(0, sIndex) + ",";
+                            }
+                        }
+                        outputList.Add(newS.Substring(0, newS.Length - 1));
+                    }
+                    else
+                    {
+                        int spaceIndex = 0;
+                        spaceIndex = s.IndexOf(" ");
+                        if (spaceIndex == 0)
+                        {
+                            outputList.Add(s);
+                        }
+                        else
+                        {
+                            outputList.Add(s.Substring(0, spaceIndex));
+                        }
+                    }
+                }
+            }
 
+            return outputList;
+        }
         private List<string> GetDistinctStringList(List<string> messList)
         {
             var outputList = new List<string>();
@@ -224,7 +286,7 @@ namespace ProjectTools
 
             return view;
         }
-        private void SetView(View3D activeView3D, Document doc, List<ElementId> hideList)
+        private void SetView(View3D view3D, Document doc, List<ElementId> hideList, ViewDetailLevel viewDetailLevel, DisplayStyle displayStyle)
         {
             using (Transaction setView = new Transaction(doc, "Set view"))
             {
@@ -232,20 +294,20 @@ namespace ProjectTools
 
                 try
                 {
-                    activeView3D.LookupParameter("ADSK_Назначение вида").Set("Схема вентиляции");
+                    view3D.LookupParameter("ADSK_Назначение вида").Set("Схемы вентиляции");
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.ToString());
                 }
 
-                activeView3D.Discipline = ViewDiscipline.Mechanical;
-                activeView3D.DetailLevel = ViewDetailLevel.Medium;
-                activeView3D.DisplayStyle = DisplayStyle.HLR;
+                view3D.Discipline = ViewDiscipline.Mechanical;
+                view3D.DetailLevel = viewDetailLevel;  
+                view3D.DisplayStyle = displayStyle; 
 
-                IList<Parameter> p1List = activeView3D.GetParameters(name: "М1_Группа вида");
-                IList<Parameter> p2List = activeView3D.GetParameters(name: "М1_Подгруппа вида");
-                IList<Parameter> p3List = activeView3D.GetParameters(name: "ADSK_Назначение вида");
+                IList<Parameter> p1List = view3D.GetParameters(name: "М1_Группа вида");
+                IList<Parameter> p2List = view3D.GetParameters(name: "М1_Подгруппа вида");
+                IList<Parameter> p3List = view3D.GetParameters(name: "ADSK_Назначение вида");
 
                 if (p1List != null)
                     foreach (var p in p1List)
@@ -262,35 +324,34 @@ namespace ProjectTools
                         if (!p.IsReadOnly)
                             p.Set("Схемы вентиляции");
 
-                activeView3D.AreImportCategoriesHidden = true;
-                activeView3D.AreAnalyticalModelCategoriesHidden = true;
+                view3D.AreImportCategoriesHidden = true;
+                view3D.AreAnalyticalModelCategoriesHidden = true;
                 //activeView3D.AreAnnotationCategoriesHidden = true;
 
                 foreach (var elId in hideList)
                 {
-                    activeView3D.HideCategoryTemporary(elId);
+                    view3D.HideCategoryTemporary(elId);
                 }
 
                 // переводит временно скрытые категории в постоянные
-                activeView3D.ConvertTemporaryHideIsolateToPermanent();
+                view3D.ConvertTemporaryHideIsolateToPermanent();
 
                 FilteredElementCollector pipeCurves = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves);
                 if (pipeCurves.Count() != 0)
-                    activeView3D.SetCategoryHidden(pipeCurves.FirstElement().Category.Id, false);
+                    view3D.SetCategoryHidden(pipeCurves.FirstElement().Category.Id, false);
                 FilteredElementCollector pipeAcc = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctAccessory);
                 if (pipeAcc.Count() != 0)
-                    activeView3D.SetCategoryHidden(pipeAcc.FirstElement().Category.Id, false);
+                    view3D.SetCategoryHidden(pipeAcc.FirstElement().Category.Id, false);
                 FilteredElementCollector pipeFit = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctFitting);
                 if (pipeFit.Count() != 0)
-                    activeView3D.SetCategoryHidden(pipeFit.FirstElement().Category.Id, false);
+                    view3D.SetCategoryHidden(pipeFit.FirstElement().Category.Id, false);
                 FilteredElementCollector mechEq = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_MechanicalEquipment);
                 if (mechEq.Count() != 0)
-                    activeView3D.SetCategoryHidden(mechEq.FirstElement().Category.Id, false);
+                    view3D.SetCategoryHidden(mechEq.FirstElement().Category.Id, false);
 
                 setView.Commit();
             }
         }
-
         private static ElementFilter CreateElementFilterFromFilterRules(IList<FilterRule> filterRules)
         {
             // We use a LogicalAndFilter containing one ElementParameterFilter
@@ -336,7 +397,6 @@ namespace ProjectTools
                 // Get the id for the shared parameter - the ElementId is not hardcoded, so we need to get an instance of this type to find it
                 Guid spGuid = new Guid("ff5da4f2-129e-4ae6-ad78-8ac062fe377a"); // М1_MEP система
 
-
                 var ducts = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves).ToList();
                 //var pipeAccessories = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeAccessory).ToList();
                 //var pipeFittings = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeFitting).ToList();
@@ -349,7 +409,20 @@ namespace ProjectTools
                     Parameter sharedParam = el.get_Parameter(spGuid);
                     ElementId sharedParamId = sharedParam.Id;
 
+                    List<string> filterNames = new List<string>();
+                    if (view.Name.Contains(","))
+                    {
+                        filterNames = view.Name.Split(',').ToList();
+                    }
+
                     filterRules.Add(ParameterFilterRuleFactory.CreateNotContainsRule(sharedParamId, value, true));
+                    if (filterNames != null)
+                    {
+                        foreach (string f in filterNames)
+                        {
+                            filterRules.Add(ParameterFilterRuleFactory.CreateNotContainsRule(sharedParamId, f, true));
+                        }
+                    }
                 }
 
                 ElementFilter elemFilter = CreateElementFilterFromFilterRules(filterRules);
@@ -362,7 +435,7 @@ namespace ProjectTools
             }
         }
 
-        public bool IsDiffersByOneLetter(string str1, string str2)
+        public bool AreTheseSystemsMustBeTogether(string str1, string str2)
         {
             int len1 = str1.Length;
             int len2 = str2.Length;

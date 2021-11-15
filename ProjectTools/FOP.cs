@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -191,6 +193,84 @@ namespace ProjectTools
 
             file.Close();
             return outputList;
+        }
+
+        public static void AddSharedParameter_M1_MEP_System(ExternalCommandData commandData)
+        {
+            UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+            Document doc = uiDoc.Document;
+
+            CategorySet catSet = commandData.Application.Application.Create.NewCategorySet();
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlumbingFixtures));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeCurves));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlaceHolderPipes));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeAccessory));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeFitting));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_MechanicalEquipment));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctCurves));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlaceHolderDucts));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctAccessory));
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctFitting));
+
+            SharedParameterElement sp_M1_MEP_System = null; 
+
+            try
+            {
+                sp_M1_MEP_System = new FilteredElementCollector(doc).OfClass(typeof(SharedParameterElement)).Cast<SharedParameterElement>().Where(x => x.GetDefinition().Name == "М1_MEP система").ToList().First();
+            }
+            catch { };
+
+            if (sp_M1_MEP_System != null)
+            {
+                using (Transaction tr = new Transaction(doc, "ReInsert Categories"))
+                {
+                    tr.Start();
+                    BindingMap bm = doc.ParameterBindings;
+                    InternalDefinition def = sp_M1_MEP_System.GetDefinition();
+
+                    if (bm.Contains(def))
+                    {
+                        //MessageBox.Show($"bm.Contains({def.Name})");
+                        bool added = false;
+                        ElementBinding b = (ElementBinding)bm.get_Item(def);
+                        foreach (Category c in catSet)
+                        {
+                            if (!b.Categories.Contains(c))
+                            {
+                                b.Categories.Insert(c);
+                                added = true;
+                                //MessageBox.Show($"b.Categories.Insert({c.Name})");
+                            }
+                        }
+                        if (added == true)
+                        {
+                            bool yes = bm.ReInsert(def, b);
+                            //MessageBox.Show($"bm.ReInsert({def.Name}, b) added true, yes(ReInsert): {yes}");
+                        }
+                        else
+                        {
+                            bm.Insert(def, b);
+                            //MessageBox.Show($"bm.ReInsert({def.Name}, b) added false");
+                        }
+                    }
+                    tr.Commit();
+                }
+                
+            }
+
+            try
+            {
+                ParameterViewModel pvm = new ParameterViewModel()
+                {
+                    Name = "М1_MEP система"
+                };
+                pvm.AddSharedParameterIntoProject(commandData, doc, catSet, BuiltInParameterGroup.PG_MECHANICAL);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            };
+
         }
 
     }

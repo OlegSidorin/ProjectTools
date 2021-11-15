@@ -11,6 +11,7 @@ namespace ProjectTools
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
     public class Command02 : IExternalCommand
     {
+        // Распределяет связи по рабочим наборам
         Result IExternalCommand.Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIDocument uiDoc = commandData.Application.ActiveUIDocument;
