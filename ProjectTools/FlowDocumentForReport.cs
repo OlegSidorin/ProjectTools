@@ -306,6 +306,8 @@ namespace ProjectTools
             pBody.Inlines.Add(run013);
             FlowDocument.Blocks.Add(pBody);
         }
+        
+        // для помещений из базы данных
 
     }
 }

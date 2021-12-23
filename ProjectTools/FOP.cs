@@ -12,6 +12,7 @@ namespace ProjectTools
     public static class FOP
     {
         public static string PathToFOP { get; } = Main.DllFolderLocation + @"\res\ФОП2019.txt";
+
         public static List<SharedParameterFromFOP> SharedParametersFromFOP { get; } = GetSharedParametersFromFOP();
 
         public static SharedParameterFromFOP GetParameterFromFOPUsingGUID(string guid)
@@ -30,6 +31,7 @@ namespace ProjectTools
                 Type = ""
             };
         }
+
         public static SharedParameterFromFOP GetParameterFromFOPUsingName(string name)
         {
             List<SharedParameterFromFOP> parameters = GetSharedParametersFromFOP();
@@ -265,6 +267,132 @@ namespace ProjectTools
                     Name = "М1_MEP система"
                 };
                 pvm.AddSharedParameterIntoProject(commandData, doc, catSet, BuiltInParameterGroup.PG_MECHANICAL);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            };
+
+        }
+
+        public static void AddSharedParameters_M1_ForRooms(ExternalCommandData commandData)
+        {
+            UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+            Document doc = uiDoc.Document;
+
+            CategorySet catSet = commandData.Application.Application.Create.NewCategorySet();
+            catSet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_Rooms));
+
+            SharedParameterElement sp_M1_Name = null;
+            SharedParameterElement sp_M1_Number = null;
+            string sp_M1_Name_Name = "М1_Имя помещения в БД";
+            string sp_M1_Number_Name = "М1_Номер помещения в БД";
+
+            try
+            {
+                sp_M1_Name = new FilteredElementCollector(doc).OfClass(typeof(SharedParameterElement)).Cast<SharedParameterElement>().Where(x => x.GetDefinition().Name == sp_M1_Name_Name).ToList().First();
+            }
+            catch { };
+            try
+            {
+                sp_M1_Number = new FilteredElementCollector(doc).OfClass(typeof(SharedParameterElement)).Cast<SharedParameterElement>().Where(x => x.GetDefinition().Name == sp_M1_Number_Name).ToList().First();
+            }
+            catch { };
+
+            if (sp_M1_Name != null)
+            {
+                using (Transaction tr = new Transaction(doc, "ReInsert Categories"))
+                {
+                    tr.Start();
+                    BindingMap bm = doc.ParameterBindings;
+                    InternalDefinition def = sp_M1_Name.GetDefinition();
+
+                    if (bm.Contains(def))
+                    {
+                        //MessageBox.Show($"bm.Contains({def.Name})");
+                        bool added = false;
+                        ElementBinding b = (ElementBinding)bm.get_Item(def);
+                        foreach (Category c in catSet)
+                        {
+                            if (!b.Categories.Contains(c))
+                            {
+                                b.Categories.Insert(c);
+                                added = true;
+                                //MessageBox.Show($"b.Categories.Insert({c.Name})");
+                            }
+                        }
+                        if (added == true)
+                        {
+                            bool yes = bm.ReInsert(def, b);
+                            //MessageBox.Show($"bm.ReInsert({def.Name}, b) added true, yes(ReInsert): {yes}");
+                        }
+                        else
+                        {
+                            bm.Insert(def, b);
+                            //MessageBox.Show($"bm.ReInsert({def.Name}, b) added false");
+                        }
+                    }
+                    tr.Commit();
+                }
+
+            }
+            if (sp_M1_Number != null)
+            {
+                using (Transaction tr = new Transaction(doc, "ReInsert Categories"))
+                {
+                    tr.Start();
+                    BindingMap bm = doc.ParameterBindings;
+                    InternalDefinition def = sp_M1_Number.GetDefinition();
+
+                    if (bm.Contains(def))
+                    {
+                        //MessageBox.Show($"bm.Contains({def.Name})");
+                        bool added = false;
+                        ElementBinding b = (ElementBinding)bm.get_Item(def);
+                        foreach (Category c in catSet)
+                        {
+                            if (!b.Categories.Contains(c))
+                            {
+                                b.Categories.Insert(c);
+                                added = true;
+                                //MessageBox.Show($"b.Categories.Insert({c.Name})");
+                            }
+                        }
+                        if (added == true)
+                        {
+                            bool yes = bm.ReInsert(def, b);
+                            //MessageBox.Show($"bm.ReInsert({def.Name}, b) added true, yes(ReInsert): {yes}");
+                        }
+                        else
+                        {
+                            bm.Insert(def, b);
+                            //MessageBox.Show($"bm.ReInsert({def.Name}, b) added false");
+                        }
+                    }
+                    tr.Commit();
+                }
+
+            }
+
+            try
+            {
+                ParameterViewModel pvm = new ParameterViewModel()
+                {
+                    Name = sp_M1_Name_Name
+                };
+                pvm.AddSharedParameterIntoProject(commandData, doc, catSet, BuiltInParameterGroup.PG_TEXT);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            };
+            try
+            {
+                ParameterViewModel pvm = new ParameterViewModel()
+                {
+                    Name = sp_M1_Number_Name
+                };
+                pvm.AddSharedParameterIntoProject(commandData, doc, catSet, BuiltInParameterGroup.PG_TEXT);
             }
             catch (Exception ex)
             {

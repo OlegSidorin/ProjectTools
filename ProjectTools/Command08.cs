@@ -15,7 +15,7 @@ namespace ProjectTools
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
     class Command08 : IExternalCommand
     {
-        // готовит список файлов в указанной папке
+        // рисует крестик в нуле
         const double K = 304.80;
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {

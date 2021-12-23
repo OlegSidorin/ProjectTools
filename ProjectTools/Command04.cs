@@ -68,8 +68,8 @@ namespace ProjectTools
                             else
                             {
                                 int spaceIndex = 0;
-                                spaceIndex = pValue.IndexOf(" "); // string[] words = s.Split(new char[] { ' ' });
-                                if (spaceIndex != 0)
+                                if (pValue.Contains(" ")) spaceIndex = pValue.IndexOf(" "); // string[] words = s.Split(new char[] { ' ' });
+                                if (spaceIndex != 0 )
                                 {
                                     pValue = pValue.Substring(0, spaceIndex);
                                 }
@@ -101,28 +101,21 @@ namespace ProjectTools
             var viewList = new List<View3D>();
             foreach (var item in mepSystemNames)
             {
-                View3D view = CreateView(item, doc);
+                View3D view = CreateView("Схема вентиляции " + item, doc, doc.ActiveView);
                 if (view != null)
                     viewList.Add(view);
             }
 
-
             var elementIdsToHide = GetDistinctElementIdList(GetAllElementIds(doc));
-
-            DisplayStyle displayStyle = DisplayStyle.HLR;
-            ViewDetailLevel viewDetailLevel = ViewDetailLevel.Medium;
-
-            try
-            {
-                displayStyle = doc.ActiveView.DisplayStyle;
-                viewDetailLevel = doc.ActiveView.DetailLevel;
-            }
-            catch { };
 
             foreach (var view in viewList)
             {
-                SetView(view, doc, elementIdsToHide, viewDetailLevel, displayStyle);
-                CreateViewFilter(doc, view, view.Name);
+                try
+                {
+                    SetView(view, doc, elementIdsToHide);
+                    CreateViewFilter(doc, view, view.Name.Replace("Схема вентиляции ", ""));
+                }
+                catch { };
             }
 
             return Result.Succeeded;
@@ -152,7 +145,7 @@ namespace ProjectTools
                     else
                     {
                         int spaceIndex = 0;
-                        spaceIndex = s.IndexOf(" ");
+                        if (s.Contains(" ")) spaceIndex = s.IndexOf(" ");
                         if (spaceIndex == 0)
                         {
                             outputList.Add(s);
@@ -251,13 +244,22 @@ namespace ProjectTools
             }
             return allElementIds;
         }
-        private View3D CreateView(string viewName, Document doc)
+        private View3D CreateView(string viewName, Document doc, View activeView)
         {
             View3D view = null;
 
             var eyePos = new XYZ(0.707106781186548, 0.707106781186548, 0); //(-1, -1, 0); 
             var upDir = new XYZ(-0.408248290463863, 0.408248290463863, 0.816496580927726); //(0, 0, 1);  
             var forwardDir = new XYZ(-0.577350269189626, 0.577350269189626, -0.577350269189626);  //(1, 1, 0);  
+
+            try
+            {
+                var activeView3D = (View3D)activeView;
+                eyePos = activeView3D.GetOrientation().EyePosition;
+                upDir = activeView3D.GetOrientation().UpDirection;
+                forwardDir = activeView3D.GetOrientation().ForwardDirection;
+            }
+            catch { };
 
             var collector = new FilteredElementCollector(doc);
             var viewFamilyType = collector.OfClass(typeof(ViewFamilyType)).Cast<ViewFamilyType>()
@@ -286,71 +288,84 @@ namespace ProjectTools
 
             return view;
         }
-        private void SetView(View3D view3D, Document doc, List<ElementId> hideList, ViewDetailLevel viewDetailLevel, DisplayStyle displayStyle)
+        private void SetView(View3D view3D, Document doc, List<ElementId> hideList)
         {
-            using (Transaction setView = new Transaction(doc, "Set view"))
+            if (view3D != null)
             {
-                setView.Start();
-
-                try
+                using (Transaction setView = new Transaction(doc, "Set view"))
                 {
-                    view3D.LookupParameter("ADSK_Назначение вида").Set("Схемы вентиляции");
+                    setView.Start();
+
+                    try
+                    {
+                        view3D.LookupParameter("ADSK_Назначение вида").Set("Схемы вентиляции");
+                    }
+                    catch (Exception ex)
+                    {
+                        //MessageBox.Show(ex.ToString());
+                    }
+
+                    view3D.Discipline = ViewDiscipline.Mechanical;
+                    view3D.DisplayStyle = DisplayStyle.HLR;
+                    view3D.DetailLevel = ViewDetailLevel.Medium;
+
+                    try
+                    {
+                        view3D.DisplayStyle = doc.ActiveView.DisplayStyle;
+                        view3D.DetailLevel = doc.ActiveView.DetailLevel;
+                    }
+                    catch { };
+
+                    view3D.SaveOrientationAndLock();
+
+                    IList<Parameter> p1List = view3D.GetParameters(name: "М1_Группа вида");
+                    IList<Parameter> p2List = view3D.GetParameters(name: "М1_Подгруппа вида");
+                    IList<Parameter> p3List = view3D.GetParameters(name: "ADSK_Назначение вида");
+
+                    if (p1List != null || p1List.Count != 0)
+                        foreach (var p in p1List)
+                            if (!p.IsReadOnly)
+                                p.Set("▲ Схемы");
+
+                    if (p2List != null || p2List.Count != 0)
+                        foreach (var p in p2List)
+                            if (!p.IsReadOnly)
+                                p.Set("Схемы вентиляции");
+
+                    if (p3List != null || p3List.Count != 0)
+                        foreach (var p in p2List)
+                            if (!p.IsReadOnly)
+                                p.Set("Схемы вентиляции");
+
+                    view3D.AreImportCategoriesHidden = true;
+                    view3D.AreAnalyticalModelCategoriesHidden = true;
+                    //activeView3D.AreAnnotationCategoriesHidden = true;
+
+                    foreach (var elId in hideList)
+                    {
+                        view3D.HideCategoryTemporary(elId);
+                    }
+
+                    // переводит временно скрытые категории в постоянные
+                    view3D.ConvertTemporaryHideIsolateToPermanent();
+
+                    FilteredElementCollector pipeCurves = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves);
+                    if (pipeCurves.Count() != 0)
+                        view3D.SetCategoryHidden(pipeCurves.FirstElement().Category.Id, false);
+                    FilteredElementCollector pipeAcc = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctAccessory);
+                    if (pipeAcc.Count() != 0)
+                        view3D.SetCategoryHidden(pipeAcc.FirstElement().Category.Id, false);
+                    FilteredElementCollector pipeFit = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctFitting);
+                    if (pipeFit.Count() != 0)
+                        view3D.SetCategoryHidden(pipeFit.FirstElement().Category.Id, false);
+                    FilteredElementCollector mechEq = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_MechanicalEquipment);
+                    if (mechEq.Count() != 0)
+                        view3D.SetCategoryHidden(mechEq.FirstElement().Category.Id, false);
+
+                    setView.Commit();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.ToString());
-                }
-
-                view3D.Discipline = ViewDiscipline.Mechanical;
-                view3D.DetailLevel = viewDetailLevel;  
-                view3D.DisplayStyle = displayStyle; 
-
-                IList<Parameter> p1List = view3D.GetParameters(name: "М1_Группа вида");
-                IList<Parameter> p2List = view3D.GetParameters(name: "М1_Подгруппа вида");
-                IList<Parameter> p3List = view3D.GetParameters(name: "ADSK_Назначение вида");
-
-                if (p1List != null)
-                    foreach (var p in p1List)
-                        if (!p.IsReadOnly)
-                            p.Set("▲ Схемы");
-
-                if (p2List != null)
-                    foreach (var p in p2List)
-                        if (!p.IsReadOnly)
-                            p.Set("Схемы вентиляции");
-
-                if (p3List != null)
-                    foreach (var p in p2List)
-                        if (!p.IsReadOnly)
-                            p.Set("Схемы вентиляции");
-
-                view3D.AreImportCategoriesHidden = true;
-                view3D.AreAnalyticalModelCategoriesHidden = true;
-                //activeView3D.AreAnnotationCategoriesHidden = true;
-
-                foreach (var elId in hideList)
-                {
-                    view3D.HideCategoryTemporary(elId);
-                }
-
-                // переводит временно скрытые категории в постоянные
-                view3D.ConvertTemporaryHideIsolateToPermanent();
-
-                FilteredElementCollector pipeCurves = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves);
-                if (pipeCurves.Count() != 0)
-                    view3D.SetCategoryHidden(pipeCurves.FirstElement().Category.Id, false);
-                FilteredElementCollector pipeAcc = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctAccessory);
-                if (pipeAcc.Count() != 0)
-                    view3D.SetCategoryHidden(pipeAcc.FirstElement().Category.Id, false);
-                FilteredElementCollector pipeFit = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctFitting);
-                if (pipeFit.Count() != 0)
-                    view3D.SetCategoryHidden(pipeFit.FirstElement().Category.Id, false);
-                FilteredElementCollector mechEq = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_MechanicalEquipment);
-                if (mechEq.Count() != 0)
-                    view3D.SetCategoryHidden(mechEq.FirstElement().Category.Id, false);
-
-                setView.Commit();
             }
+            
         }
         private static ElementFilter CreateElementFilterFromFilterRules(IList<FilterRule> filterRules)
         {
@@ -376,62 +391,91 @@ namespace ProjectTools
             categories.Add(new ElementId(BuiltInCategory.OST_DuctFitting));
             categories.Add(new ElementId(BuiltInCategory.OST_MechanicalEquipment));
             List<FilterRule> filterRules = new List<FilterRule>();
-
-            using (Transaction t = new Transaction(doc, "Add view filter"))
+            string filterName = "Фильтр для Системы вентиляции " + value;
+            var filter = new FilteredElementCollector(doc).OfClass(typeof(ParameterFilterElement)).Cast<ParameterFilterElement>().Where(x => x.Name == filterName).ToList().FirstOrDefault();
+            if (filter != null)
             {
-                t.Start();
-
-                // Create filter element assocated to the input categories
-                ParameterFilterElement parameterFilterElement = ParameterFilterElement.Create(doc, "Фильтр для Системы " + value, categories);
-
-                /*
-                // Criterion 1 - wall type Function is "Exterior"
-                ElementId exteriorParamId = new ElementId(BuiltInParameter.FUNCTION_PARAM);
-                filterRules.Add(ParameterFilterRuleFactory.CreateEqualsRule(exteriorParamId, (int)WallFunction.Exterior));
-
-                // Criterion 2 - wall height > some number
-                ElementId lengthId = new ElementId(BuiltInParameter.CURVE_ELEM_LENGTH);
-                filterRules.Add(ParameterFilterRuleFactory.CreateGreaterOrEqualRule(lengthId, 28.0, 0.0001));
-                */
-                // Criterion 3 - custom shared parameter value matches string pattern
-                // Get the id for the shared parameter - the ElementId is not hardcoded, so we need to get an instance of this type to find it
-                Guid spGuid = new Guid("ff5da4f2-129e-4ae6-ad78-8ac062fe377a"); // М1_MEP система
-
-                var ducts = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves).ToList();
-                //var pipeAccessories = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeAccessory).ToList();
-                //var pipeFittings = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeFitting).ToList();
-                //var plumbingFixtures = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PlumbingFixtures).ToList();
-
-                Element el = ducts.First();
-
-                if (el != null)
+                using (Transaction t = new Transaction(doc, "Delete Filter"))
                 {
-                    Parameter sharedParam = el.get_Parameter(spGuid);
-                    ElementId sharedParamId = sharedParam.Id;
+                    t.Start();
+                    doc.Delete(filter.Id);
+                    t.Commit();
+                }
+            }
+                
+            try
+            {
+                using (Transaction t = new Transaction(doc, "Add view filter"))
+                {
+                    t.Start();
 
-                    List<string> filterNames = new List<string>();
-                    if (view.Name.Contains(","))
-                    {
-                        filterNames = view.Name.Split(',').ToList();
-                    }
+                    // Create filter element assocated to the input categories
+                    ParameterFilterElement parameterFilterElement = ParameterFilterElement.Create(doc, filterName, categories);
 
-                    filterRules.Add(ParameterFilterRuleFactory.CreateNotContainsRule(sharedParamId, value, true));
-                    if (filterNames != null)
+                    /*
+                    // Criterion 1 - wall type Function is "Exterior"
+                    ElementId exteriorParamId = new ElementId(BuiltInParameter.FUNCTION_PARAM);
+                    filterRules.Add(ParameterFilterRuleFactory.CreateEqualsRule(exteriorParamId, (int)WallFunction.Exterior));
+
+                    // Criterion 2 - wall height > some number
+                    ElementId lengthId = new ElementId(BuiltInParameter.CURVE_ELEM_LENGTH);
+                    filterRules.Add(ParameterFilterRuleFactory.CreateGreaterOrEqualRule(lengthId, 28.0, 0.0001));
+                    */
+                    // Criterion 3 - custom shared parameter value matches string pattern
+                    // Get the id for the shared parameter - the ElementId is not hardcoded, so we need to get an instance of this type to find it
+                    Guid spGuid = new Guid("ff5da4f2-129e-4ae6-ad78-8ac062fe377a"); // М1_MEP система
+
+                    var ducts = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_DuctCurves).ToList();
+                    //var pipeAccessories = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeAccessory).ToList();
+                    //var pipeFittings = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PipeFitting).ToList();
+                    //var plumbingFixtures = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_PlumbingFixtures).ToList();
+
+                    Element el = ducts.First();
+
+                    if (el != null)
                     {
-                        foreach (string f in filterNames)
+                        Parameter sharedParam = el.get_Parameter(spGuid);
+                        ElementId sharedParamId = sharedParam.Id;
+
+                        List<string> filterNames = new List<string>();
+                        string viewName = view.Name.Replace("Схема вентиляции ", "");
+                        if (viewName.Contains(","))
                         {
-                            filterRules.Add(ParameterFilterRuleFactory.CreateNotContainsRule(sharedParamId, f, true));
+                            filterNames = viewName.Split(',').ToList();
+                        }
+
+                        filterRules.Add(ParameterFilterRuleFactory.CreateNotContainsRule(sharedParamId, value, true));
+                        if (filterNames != null)
+                        {
+                            foreach (string f in filterNames)
+                            {
+                                filterRules.Add(ParameterFilterRuleFactory.CreateNotContainsRule(sharedParamId, f, true));
+                            }
                         }
                     }
+
+                    ElementFilter elemFilter = CreateElementFilterFromFilterRules(filterRules);
+                    parameterFilterElement.SetElementFilter(elemFilter);
+
+                    // Apply filter to view
+                    view.AddFilter(parameterFilterElement.Id);
+                    view.SetFilterVisibility(parameterFilterElement.Id, false);
+                    t.Commit();
                 }
-
-                ElementFilter elemFilter = CreateElementFilterFromFilterRules(filterRules);
-                parameterFilterElement.SetElementFilter(elemFilter);
-
-                // Apply filter to view
-                view.AddFilter(parameterFilterElement.Id);
-                view.SetFilterVisibility(parameterFilterElement.Id, false);
-                t.Commit();
+            }
+             catch
+            {
+                try
+                {
+                    using (Transaction t = new Transaction(doc, "Add Filter"))
+                    {
+                        t.Start();
+                        var parameterFilterElement = new FilteredElementCollector(doc).OfClass(typeof(ParameterFilterElement)).Cast<ParameterFilterElement>().Where(x => x.Name == filterName).ToList().FirstOrDefault();
+                        view.SetFilterVisibility(parameterFilterElement.Id, false);
+                        t.Commit();
+                    }
+                }
+                catch { };
             }
         }
 

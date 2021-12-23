@@ -33,7 +33,7 @@ namespace ProjectTools
             UserFolder = @"C:\Users\" + Environment.UserName;
 
             #region Buttons
-
+            
             var CreateBIM360ViewBtnData = new PushButtonData("CreateBIM360BtnData", "Создать вид\nNavisworks", DllLocation, "ProjectTools.Command01")
             {
                 ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\navis-view-plus-3.png", UriKind.Absolute)),
@@ -106,7 +106,37 @@ namespace ProjectTools
             var FilesListBtn = panel.AddItem(FilesListBtnData) as PushButton;
             FilesListBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\folders-icon.png", UriKind.Absolute));
 
-            
+            var AddParamsInRoomsBtnData = new PushButtonData("AddParamsInRoomsBtnData", "Добавить\nпараметры", DllLocation, "ProjectTools.Command10")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-room.png", UriKind.Absolute)),
+                ToolTip = "Добавляет параметры М1_Номер и М1_Имя в помещения, присваивает текущие значения"
+            };
+            var AddParamsInRoomsBtn = panel.AddItem(AddParamsInRoomsBtnData) as PushButton;
+            AddParamsInRoomsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-room.png", UriKind.Absolute));
+
+            var CheckRoomsBtnData = new PushButtonData("CheckRoomsBtnData", "Проверка\nпомещений", DllLocation, "ProjectTools.Command09")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-room.png", UriKind.Absolute)),
+                ToolTip = "Создает список помещеий, в которых номер помещений не совпадает с параметрами для ТХ"
+            };
+            var CheckRoomsBtn = panel.AddItem(CheckRoomsBtnData) as PushButton;
+            CheckRoomsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-room.png", UriKind.Absolute));
+
+            var ChangeMaterialBtnData = new PushButtonData("ChangeMaterialBtnData", "Заменить\nматериал стен", DllLocation, "ProjectTools.Command11")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\wall.png", UriKind.Absolute)),
+                ToolTip = "Меняет материал всех стен на материал с названием M1_Material"
+            };
+            var ChangeMaterialBtn = panel.AddItem(ChangeMaterialBtnData) as PushButton;
+            ChangeMaterialBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\wall.png", UriKind.Absolute));
+
+            var ChangeFloorMaterialBtnData = new PushButtonData("ChangeFloorMaterialBtnData", "Заменить\nматериал пола", DllLocation, "ProjectTools.Command12")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\floor.png", UriKind.Absolute)),
+                ToolTip = "Меняет материал всех полов на материал с названием M1_Material"
+            };
+            var ChangeFloorMaterialBtn = panel.AddItem(ChangeFloorMaterialBtnData) as PushButton;
+            ChangeFloorMaterialBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\floor.png", UriKind.Absolute));
 
             //PushButtonData ButtonDataQ = new PushButtonData("ButtonDataQ", "Проверить\nпараметры", DllLocation, "FamilyParametersChanger.MainCommandQ")
             //{
