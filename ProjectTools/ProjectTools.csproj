@@ -91,6 +91,7 @@
     <Compile Include="Command10.cs" />
     <Compile Include="Command11.cs" />
     <Compile Include="Command12.cs" />
+    <Compile Include="Command13.cs" />
     <Compile Include="FilePathViewModel.cs" />
     <Compile Include="FlowDocumentForReport.cs" />
     <Compile Include="FOP.cs" />
@@ -118,6 +119,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="res\fp-icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\hole.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="res\icons8-home.png">
@@ -198,6 +202,18 @@
     <None Include="packages.config" />
     <None Include="ProjectTools.addin.debug" />
     <None Include="ProjectTools.addin.release" />
+    <None Include="res\М1_ОтверстиеКруглое_Перекрытие.rfa">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="res\М1_ОтверстиеКруглое_Стена.rfa">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="res\М1_ОтверстиеПрямоугольное_Перекрытие.rfa">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="res\М1_ОтверстиеПрямоугольное_Стена.rfa">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

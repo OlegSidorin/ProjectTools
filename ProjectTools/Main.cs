@@ -138,6 +138,15 @@ namespace ProjectTools
             var ChangeFloorMaterialBtn = panel.AddItem(ChangeFloorMaterialBtnData) as PushButton;
             ChangeFloorMaterialBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\floor.png", UriKind.Absolute));
 
+            var AutoHolesBtnData = new PushButtonData("AutoHolesBtnData", "Расставить\nзаглушки отверстий", DllLocation, "ProjectTools.Command13")
+            {
+                ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\hole.png", UriKind.Absolute)),
+                ToolTip = "Автоматическая расстановка отверстий"
+            };
+            var AutoHolesBtn = panel.AddItem(AutoHolesBtnData) as PushButton;
+            AutoHolesBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\hole.png", UriKind.Absolute));
+
+
             //PushButtonData ButtonDataQ = new PushButtonData("ButtonDataQ", "Проверить\nпараметры", DllLocation, "FamilyParametersChanger.MainCommandQ")
             //{
             //    ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\q-icon.png", UriKind.Absolute)),
