@@ -118,20 +118,18 @@ namespace ProjectTools
 
             MessageBox.Show("rounded: " + roundedDucts.Count.ToString() + ",\n" + "rect: " + rectangularDucts.Count.ToString());
 
-            var family = new FilteredElementCollector(doc).OfClass(typeof(Family)).Where(x => x.Name == family_name_hole_walls_round).Cast<Family>().ToList().First();
-            var familySymbol = doc.GetElement(family.GetFamilySymbolIds().First()) as FamilySymbol;
-            
+            var family_hole_walls_round = new FilteredElementCollector(doc).OfClass(typeof(Family)).Where(x => x.Name == family_name_hole_walls_round).Cast<Family>().ToList().First();
+            var familySymbol_hole_walls_round = doc.GetElement(family_hole_walls_round.GetFamilySymbolIds().First()) as FamilySymbol;
 
+            var family_hole_walls_square = new FilteredElementCollector(doc).OfClass(typeof(Family)).Where(x => x.Name == family_name_hole_walls_square).Cast<Family>().ToList().First();
+            var familySymbol_hole_walls_square = doc.GetElement(family_hole_walls_square.GetFamilySymbolIds().First()) as FamilySymbol;
 
             List<XYZ> intersections = new List<XYZ>();
             foreach (Duct duct in roundedDucts)
             {
                 foreach (Wall wall in walls)
                 {
-                    Curve ductCurve = FindDuctCurve(duct, out XYZ vector);
-                    //double height = ductCurve.GetEndPoint(0).Z;
-
-                    //Curve wallCurve = FindWallCurve(w, height);
+                    Curve ductCurve = FindDuctCurve(duct, out XYZ vector, out Line line);
 
                     XYZ intersection = null;
 
@@ -139,20 +137,21 @@ namespace ProjectTools
 
                     foreach (Face face in wallFaces)
                     {
-                        intersection = FindFaceCurve(ductCurve, face);
+                        intersection = FindFaceCurve(ductCurve, line, face);
                         if (null != intersection)
                         {
                             FamilyInstance familyInstance = null;
                             using (Transaction tr = new Transaction(doc, " we "))
                             {
                                 tr.Start();
-                                if (!familySymbol.IsActive) familySymbol.Activate();
-                                familyInstance = doc.Create.NewFamilyInstance(intersection, familySymbol, (Level)doc.GetElement(duct.LevelId), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                if (!familySymbol_hole_walls_round.IsActive) familySymbol_hole_walls_round.Activate();
+                                familyInstance = doc.Create.NewFamilyInstance(intersection, familySymbol_hole_walls_round, (Level)doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                 XYZ point1 = new XYZ(intersection.X, intersection.Y, 0);
                                 XYZ point2 = new XYZ(intersection.X, intersection.Y, 10);
                                 Line axis = Line.CreateBound(point1, point2);
 
                                 ElementTransformUtils.RotateElement(doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
+                                
                                 tr.Commit();
                             }
 
@@ -163,31 +162,12 @@ namespace ProjectTools
                                 tr.Start();
                                 familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter * 1.2);
                                 familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
+                                familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
+                                familyInstance.LookupParameter("Angle_Wall").Set(familyInstance.FacingOrientation.AngleTo(XYZ.BasisY));
+                                familyInstance.LookupParameter("Angle_Duct").Set(vector.AngleTo(XYZ.BasisY));
                                 tr.Commit();
                             }
-                                
 
-                            //foreach (FamilyParameter fp in familyParameters)
-                            //{
-                            //    if (fp.Definition.Name == "ADSK_Размер_Диаметр")
-                            //    {
-                            //        using (Transaction tr = new Transaction(doc, "asa1"))
-                            //        {
-                            //            tr.Start();
-                            //            fm.Set(fp, duct.Diameter * 1.2);
-                            //            tr.Commit();
-                            //        }
-                            //    }
-                            //    if (fp.Definition.Name == "ADSK_Размер_Глубина")
-                            //    {
-                            //        using (Transaction tr = new Transaction(doc, "asa2"))
-                            //        {
-                            //            tr.Start();
-                            //            fm.Set(fp, wall.Width * 1.2);
-                            //            tr.Commit();
-                            //        }
-                            //    }
-                            //}
                             intersections.Add(intersection);
                         }
 
@@ -195,7 +175,54 @@ namespace ProjectTools
                 }
             }
 
+            #region rectangular
+            //foreach (Duct duct in rectangularDucts)
+            //{
+            //    foreach (Wall wall in walls)
+            //    {
+            //        Curve ductCurve = FindDuctCurve(duct, out XYZ vector, out Line line);
 
+            //        XYZ intersection = null;
+
+            //        List<Face> wallFaces = FindWallFace(wall);
+
+            //        foreach (Face face in wallFaces)
+            //        {
+            //            intersection = FindFaceCurve(ductCurve, line, face);
+            //            if (null != intersection)
+            //            {
+            //                FamilyInstance familyInstance = null;
+            //                using (Transaction tr = new Transaction(doc, " we2 "))
+            //                {
+            //                    tr.Start();
+            //                    if (!familySymbol_hole_walls_square.IsActive) familySymbol_hole_walls_square.Activate();
+            //                    familyInstance = doc.Create.NewFamilyInstance(intersection, familySymbol_hole_walls_square, duct.ReferenceLevel, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+            //                    XYZ point1 = new XYZ(intersection.X, intersection.Y, 0);
+            //                    XYZ point2 = new XYZ(intersection.X, intersection.Y, 10);
+            //                    Line axis = Line.CreateBound(point1, point2);
+
+            //                    ElementTransformUtils.RotateElement(doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
+            //                    tr.Commit();
+            //                }
+
+            //                FamilyManager fm = doc.EditFamily(familyInstance.Symbol.Family).FamilyManager;
+            //                var familyParameters = fm.GetParameters();
+            //                using (Transaction tr = new Transaction(doc, "asa2"))
+            //                {
+            //                    tr.Start();
+            //                    familyInstance.LookupParameter("ADSK_Размер_Ширина").Set(duct.Width * 1.2);
+            //                    familyInstance.LookupParameter("ADSK_Размер_Высота").Set(duct.Height * 1.2);
+            //                    familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
+            //                    tr.Commit();
+            //                }
+
+            //                intersections.Add(intersection);
+            //            }
+
+            //        }
+            //    }
+            //}
+            #endregion
 
 
             string output = "";
@@ -227,65 +254,7 @@ namespace ProjectTools
                 }
             }
         }
-
-        private XYZ GetIntersectionsWithWall(MEPCurve mepCurve, Wall wall)
-        {
-            XYZ xyz = null;
-            
-            try
-            {
-                //TODO: add your code below.
-                // Find intersections between family instances and a selected element
-
-                FilteredElementCollector WallCollector = new FilteredElementCollector(CachedDoc);
-                WallCollector.OfClass(typeof(Wall));
-                List<Wall> walls = WallCollector.Cast<Wall>().ToList();
-
-                FilteredElementCollector DuctCollector = new FilteredElementCollector(CachedDoc);
-                DuctCollector.OfClass(typeof(Duct));
-
-                List<Duct> ducts = DuctCollector.Cast<Duct>().ToList();
-                List<XYZ> points = new List<XYZ>();
-
-                foreach (Duct d in ducts)
-                {
-                    foreach (Wall w in walls)
-                    {
-                        Curve ductCurve = FindDuctCurve(d, out XYZ vector);
-                        double height = ductCurve.GetEndPoint(0).Z;
-
-                        //Curve wallCurve = FindWallCurve(w, height);
-
-                        XYZ intersection = null;
-
-                        List<Face> wallFaces = FindWallFace(w);
-
-                        foreach (Face f in wallFaces)
-                        {
-                            intersection = FindFaceCurve(ductCurve, f);
-                            if (null != intersection)
-                                points.Add(intersection);
-                        }
-                    }
-                }
-
-                StringBuilder sb = new StringBuilder();
-
-                foreach (XYZ p in points)
-                {
-                    sb.AppendLine(p.ToString());
-                }
-                MessageBox.Show(sb.ToString());
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.ToString());
-            }
-            return XYZ.Zero;
-        }
-        //Find the wind pipe corresponding curve
-        public Curve FindDuctCurve(Duct duct, out XYZ vector)
+        public Curve FindDuctCurve(Duct duct, out XYZ vector, out Line line)
         {
             //The wind pipe curve
             IList<XYZ> list = new List<XYZ>();
@@ -295,8 +264,15 @@ namespace ProjectTools
                 Connector conn = csi.Current as Connector;
                 list.Add(conn.Origin);
             }
+
+            if (list.ElementAt(0).X < list.ElementAt(1).X) line = Line.CreateBound(list.ElementAt(0), list.ElementAt(1));
+            else line = Line.CreateBound(list.ElementAt(1), list.ElementAt(0));
+
             Curve curve = Line.CreateBound(list.ElementAt(0), list.ElementAt(1)) as Curve;
-            vector = (list.ElementAt(0) - list.ElementAt(1)).Normalize();
+
+            if (list.ElementAt(0).X < list.ElementAt(1).X) vector = (list.ElementAt(0) - list.ElementAt(1)).Normalize();
+            else  vector = (list.ElementAt(1) - list.ElementAt(0)).Normalize();
+
             curve.MakeUnbound();
 
             return curve;
@@ -327,9 +303,10 @@ namespace ProjectTools
                     }
                 }
             }
+            
             return normalFaces;
         }
-        public XYZ FindFaceCurve(Curve DuctCurve, Face WallFace)
+        public XYZ FindFaceCurve(Curve DuctCurve, Line line, Face WallFace)
         {
             //The intersection point
             IntersectionResultArray intersectionR = new IntersectionResultArray();//Intersection point set
@@ -346,7 +323,10 @@ namespace ProjectTools
                 {
                     if (!intersectionR.IsEmpty)
                     {
-                        intersectionResult = intersectionR.get_Item(0).XYZPoint;
+                        if (line.Contains(intersectionR.get_Item(0).XYZPoint))
+                        {
+                            intersectionResult = intersectionR.get_Item(0).XYZPoint;
+                        }
                     }
                 }
             }
@@ -354,7 +334,18 @@ namespace ProjectTools
         }
     }
 
-    
+    public static class LineExtension
+    {
+        static readonly double EPSILON = Math.Pow(2, -52);
+        public static bool Contains(this Line line, XYZ point)
+        {
+            XYZ a = line.GetEndPoint(0); // Line start point
+            XYZ b = line.GetEndPoint(1); // Line end point
+            XYZ p = point;
+            return (Math.Abs(a.DistanceTo(b) - (a.DistanceTo(p) + p.DistanceTo(b))) < EPSILON * 1000);
+        }
+
+    }
 
     public class RevitLinkSelectionFilter : ISelectionFilter
     {
