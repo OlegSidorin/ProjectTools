@@ -24,29 +24,7 @@ namespace ProjectTools
     {
         private static ExternalCommandData _cachedCmdData;
 
-        public static UIApplication CachedUiApp
-        {
-            get
-            {
-                return _cachedCmdData.Application;
-            }
-        }
-
-        public static Application CachedApp
-        {
-            get
-            {
-                return CachedUiApp.Application;
-            }
-        }
-
-        public static Document CachedDoc
-        {
-            get
-            {
-                return CachedUiApp.ActiveUIDocument.Document;
-            }
-        }
+        Document doc { get; set; }
 
         public Result Execute(ExternalCommandData cmdData, ref string message, ElementSet elements)
         {
@@ -54,7 +32,7 @@ namespace ProjectTools
 
             Application app = cmdData.Application.Application;
             UIDocument uidoc = cmdData.Application.ActiveUIDocument;
-            Document doc = uidoc.Document;
+            doc = uidoc.Document;
 
             string family_name_hole_walls_round = "М1_ОтверстиеКруглое_Стена";
             string family_name_hole_walls_square = "М1_ОтверстиеПрямоугольное_Стена";
@@ -133,7 +111,7 @@ namespace ProjectTools
 
                     XYZ intersection = null;
 
-                    List<Face> wallFaces = FindWallFace(wall);
+                    List<Face> wallFaces = FindWallFace(wall, out double alfa, out XYZ faceCenter, out XYZ midCenter);
 
                     foreach (Face face in wallFaces)
                     {
@@ -163,8 +141,7 @@ namespace ProjectTools
                                 familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter * 1.2);
                                 familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
                                 familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
-                                familyInstance.LookupParameter("Angle_Wall").Set(familyInstance.FacingOrientation.AngleTo(XYZ.BasisY));
-                                familyInstance.LookupParameter("Angle_Duct").Set(vector.AngleTo(XYZ.BasisY));
+                                familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + faceCenter.ToString() + " : " + midCenter.ToString());
                                 tr.Commit();
                             }
 
@@ -224,6 +201,7 @@ namespace ProjectTools
             //}
             #endregion
 
+            
 
             string output = "";
             //foreach (XYZ xyz in intersections)
@@ -277,9 +255,39 @@ namespace ProjectTools
 
             return curve;
         }
-        public List<Face> FindWallFace(Wall wall)
+        public List<Face> FindWallFace(Wall wall, out double alfa, out XYZ faceRight, out XYZ locCurveRight)
         {
+            XYZ faceCenter = XYZ.Zero;
+            faceRight = XYZ.Zero; 
             List<Face> normalFaces = new List<Face>();
+
+            LocationCurve locCurve = wall.Location as LocationCurve;
+
+            XYZ start;
+            XYZ end;
+
+            if (locCurve.Curve.GetEndPoint(0).X <= locCurve.Curve.GetEndPoint(1).X)
+            {
+                start = locCurve.Curve.GetEndPoint(0);
+                end = locCurve.Curve.GetEndPoint(1);
+            }
+            else
+            {
+                start = locCurve.Curve.GetEndPoint(1);
+                end = locCurve.Curve.GetEndPoint(0);
+            }
+
+            XYZ locCurveCenter = (start + end) / 2;
+            locCurveRight = end;
+
+            if (end.X - start.X < Math.Pow(2, -40))
+            {
+                alfa = Math.PI / 2;
+            }
+            else
+            {
+                alfa = Math.Atan((end.Y - start.Y) / (end.X - start.X));
+            }
 
             Options opt = new Options();
             opt.ComputeReferences = true;
@@ -290,6 +298,7 @@ namespace ProjectTools
             foreach (GeometryObject obj in e)
             {
                 Solid solid = obj as Solid;
+                
 
                 if (solid != null && solid.Faces.Size > 0)
                 {
@@ -303,7 +312,69 @@ namespace ProjectTools
                     }
                 }
             }
-            
+
+            Face mostAreaFace = null;
+
+            List<Face> specFaces = new List<Face>();
+
+            if (normalFaces.Count > 2)
+            {
+                if (alfa >= 0)
+                {
+                    foreach (var face in normalFaces)
+                    {
+                        faceCenter = GetCenterOfFace(face);
+                        faceRight = GetRightXYZ(face);
+                        if (faceCenter.Y - locCurveCenter.Y > Math.Pow(2, -40))
+                        {
+                            specFaces.Add(face);
+                        }
+                        //if (specFaces.Count != 0) mostAreaFace = specFaces.FirstOrDefault();
+                        //foreach (Face faceSpec in specFaces)
+                        //{
+                        //    if (faceSpec.Area >= mostAreaFace.Area)
+                        //    {
+                        //        xyz = XYZ.Zero;
+                        //        mostAreaFace = faceSpec;
+                        //    }
+                        //}
+                    }
+                }
+                else
+                {
+                    foreach (var face in normalFaces)
+                    {
+                        faceCenter = GetCenterOfFace(face);
+                        faceRight = GetRightXYZ(face);
+                        if (faceCenter.Y - locCurveCenter.Y < Math.Pow(2, -40))
+                        {
+                            specFaces.Add(face);
+                        }
+                        //if (specFaces.Count != 0) mostAreaFace = specFaces.FirstOrDefault();
+                        //foreach (Face faceSpec in specFaces)
+                        //{
+                        //    if (faceSpec.Area >= mostAreaFace.Area)
+                        //    {
+                        //        xyz = XYZ.Zero;
+                        //        mostAreaFace = faceSpec;
+                        //    }
+                        //}
+                    }
+                }
+
+            }
+
+            if (mostAreaFace != null)
+            {
+
+            }
+            normalFaces.Clear();
+            foreach (Face f in specFaces)
+            {
+                normalFaces.Add(f);
+            }
+
+
             return normalFaces;
         }
         public XYZ FindFaceCurve(Curve DuctCurve, Line line, Face WallFace)
@@ -332,6 +403,50 @@ namespace ProjectTools
             }
             return intersectionResult;
         }
+
+        public XYZ GetCenterOfFace(Face face)
+        {
+            double CurvePoints_Umin = double.MaxValue;
+            double CurvePoints_Umax = double.MinValue;
+            double CurvePoints_Vmin = double.MaxValue;
+            double CurvePoints_Vmax = double.MinValue;
+
+            foreach (EdgeArray edgeArray in face.EdgeLoops)
+            {
+                foreach(Edge edge in edgeArray)
+                {
+                    foreach(UV uv in edge.TessellateOnFace(face))
+                    {
+                        CurvePoints_Umin = Math.Min(CurvePoints_Umin, uv.U);
+                        CurvePoints_Umax = Math.Max(CurvePoints_Umax, uv.U);
+                        CurvePoints_Vmin = Math.Min(CurvePoints_Vmin, uv.V);
+                        CurvePoints_Vmax = Math.Max(CurvePoints_Vmax, uv.V);
+                    }
+                }
+            }
+
+            UV uvCenter = new UV(CurvePoints_Umax - CurvePoints_Umin, CurvePoints_Vmax - CurvePoints_Vmin);
+
+            return face.Evaluate(uvCenter);
+        }
+
+        public XYZ GetRightXYZ(Face face)
+        {
+            XYZ xyz = new XYZ(double.MinValue, double.MinValue, double.MinValue);
+
+            foreach (EdgeArray edgeArray in face.EdgeLoops)
+            {
+                foreach (Edge edge in edgeArray)
+                {
+                    if (edge.AsCurve().GetEndPoint(0).X > xyz.X) xyz = new XYZ(edge.AsCurve().GetEndPoint(0).X, edge.AsCurve().GetEndPoint(0).Y, edge.AsCurve().GetEndPoint(0).Z);
+                    if (edge.AsCurve().GetEndPoint(1).X > xyz.X) xyz = new XYZ(edge.AsCurve().GetEndPoint(1).X, edge.AsCurve().GetEndPoint(1).Y, edge.AsCurve().GetEndPoint(1).Z);
+                }
+            }
+
+
+            return xyz;
+        }
+
     }
 
     public static class LineExtension
