@@ -111,7 +111,7 @@ namespace ProjectTools
 
                     XYZ intersection = null;
 
-                    List<Face> wallFaces = FindWallFace(wall, out double alfa, out XYZ faceCenter, out XYZ midCenter);
+                    List<Face> wallFaces = FindWallFace(wall, out double alfa, out XYZ myXYZ, out XYZ rightXYZ, out string oEdges);
 
                     foreach (Face face in wallFaces)
                     {
@@ -141,7 +141,7 @@ namespace ProjectTools
                                 familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter * 1.2);
                                 familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
                                 familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
-                                familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + faceCenter.ToString() + " : " + midCenter.ToString());
+                                familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
                                 tr.Commit();
                             }
 
@@ -255,11 +255,15 @@ namespace ProjectTools
 
             return curve;
         }
-        public List<Face> FindWallFace(Wall wall, out double alfa, out XYZ faceRight, out XYZ locCurveRight)
+        public List<Face> FindWallFace(Wall wall, out double alfa, out XYZ myXYZ, out XYZ locCurveRight, out string oEdges)
         {
             XYZ faceCenter = XYZ.Zero;
-            faceRight = XYZ.Zero; 
+
+            myXYZ = new XYZ(-1000000000, -1000000000, 1);
+
+            //face1 = XYZ.Zero; 
             List<Face> normalFaces = new List<Face>();
+            List<Face> myFaces = new List<Face>();
 
             LocationCurve locCurve = wall.Location as LocationCurve;
 
@@ -295,11 +299,12 @@ namespace ProjectTools
 
             GeometryElement e = wall.get_Geometry(opt);
 
+            Face myFace = null;
+            Edge myEdge = null;
+            oEdges = "";
             foreach (GeometryObject obj in e)
             {
                 Solid solid = obj as Solid;
-                
-
                 if (solid != null && solid.Faces.Size > 0)
                 {
                     foreach (Face face in solid.Faces)
@@ -310,25 +315,107 @@ namespace ProjectTools
                             normalFaces.Add(pf);
                         }
                     }
+
+                    myFace = solid.Edges.get_Item(0).GetFace(0);
+
+                    //myEdge = solid.Edges.get_Item(0);
+
+                    List<Edge> myEdges = new List<Edge>();
+
+                    foreach (Edge edge in solid.Edges)
+                    {
+                        myEdges.Add(edge);
+                        oEdges += $"{edge.AsCurve().GetEndPoint(0).X * 304.8}\t{edge.AsCurve().GetEndPoint(0).Y * 304.8}\t{edge.AsCurve().GetEndPoint(0).Z * 304.8}\t{edge.AsCurve().GetEndPoint(1).X * 304.8}\t{edge.AsCurve().GetEndPoint(1).Y * 304.8}\t{edge.AsCurve().GetEndPoint(1).Z * 304.8}\n";
+
+                        //if (Math.Abs(edge.AsCurve().GetEndPoint(0).X - edge.AsCurve().GetEndPoint(1).X) < 0.0000001)
+                        //{
+                        //    if (Math.Abs(edge.AsCurve().GetEndPoint(0).Y - edge.AsCurve().GetEndPoint(1).Y) < 0.0000001)
+                        //    {
+                        //        myEdges.Add(edge);
+                        //        oEdges += $"{edge.AsCurve().GetEndPoint(0)}:{edge.AsCurve().GetEndPoint(1)}\n";
+                        //    }
+                        //}
+                        
+                    }
+
+                    myEdge = solid.Edges.get_Item(0);
+
+                    if (alfa + 0.001 > 0)
+                    {
+                        foreach (Edge ed in myEdges)
+                        {
+                            if (ed.AsCurve().GetEndPoint(0).Y > myEdge.AsCurve().GetEndPoint(0).Y)
+                            {
+                                myEdge = ed;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (Edge ed in myEdges)
+                        {
+                            if (ed.AsCurve().GetEndPoint(0).Y < myEdge.AsCurve().GetEndPoint(0).Y)
+                            {
+                                myEdge = ed;
+                            }
+                        }
+                    }
+                    
+                        
+
+
+
+                    if (myEdge.GetFace(0).Area >= myFace.Area - 0.001)
+                    {
+                        PlanarFace pf = myEdge.GetFace(0) as PlanarFace;
+                        if (pf != null)
+                        {
+                            myFace = pf;
+                            myXYZ = new XYZ(myEdge.AsCurve().GetEndPoint(0).X, myEdge.AsCurve().GetEndPoint(0).Y, 0);
+                        }
+                    }
+                    if (myEdge.GetFace(1).Area >= myFace.Area - 0.001)
+                    {
+                        PlanarFace pf = myEdge.GetFace(1) as PlanarFace;
+                        if (pf != null)
+                        {
+                            myFace = pf;
+                            myXYZ = new XYZ(myEdge.AsCurve().GetEndPoint(0).X, myEdge.AsCurve().GetEndPoint(0).Y, 0);
+                        }
+                    }
+
+
+
                 }
             }
 
-            Face mostAreaFace = null;
 
-            List<Face> specFaces = new List<Face>();
+            //List<Face> specFaces = new List<Face>();
+            //Face mostAreaFace = null;
 
-            if (normalFaces.Count > 2)
-            {
-                if (alfa >= 0)
-                {
-                    foreach (var face in normalFaces)
-                    {
-                        faceCenter = GetCenterOfFace(face);
-                        faceRight = GetRightXYZ(face);
-                        if (faceCenter.Y - locCurveCenter.Y > Math.Pow(2, -40))
-                        {
-                            specFaces.Add(face);
-                        }
+            //if (normalFaces.Count > 2)
+            //{
+            //    if (alfa >= 0)
+            //    {
+            //        foreach (var face in normalFaces)
+            //        {
+            //            var curveLoops = face.GetEdgesAsCurveLoops();
+            //            foreach(var curveLoop in curveLoops)
+            //            {
+            //                List<XYZ> pts = new List<XYZ>();
+            //                foreach (Curve c in curveLoop)
+            //                {
+            //                    pts.AddRange(c.Tessellate());
+            //                }
+            //                BoundingBoxXYZ bb = new BoundingBoxXYZ();
+            //                bb.set_Bounds()
+            //            }
+                        //faceCenter = GetCenterOfFace(face);
+                        //face = GetRightXYZ(face);
+                        //if (faceCenter.Y - locCurveCenter.Y > Math.Pow(2, -40))
+                        //{
+                        //    specFaces.Add(face);
+                        //}
                         //if (specFaces.Count != 0) mostAreaFace = specFaces.FirstOrDefault();
                         //foreach (Face faceSpec in specFaces)
                         //{
@@ -338,41 +425,44 @@ namespace ProjectTools
                         //        mostAreaFace = faceSpec;
                         //    }
                         //}
-                    }
-                }
-                else
-                {
-                    foreach (var face in normalFaces)
-                    {
-                        faceCenter = GetCenterOfFace(face);
-                        faceRight = GetRightXYZ(face);
-                        if (faceCenter.Y - locCurveCenter.Y < Math.Pow(2, -40))
-                        {
-                            specFaces.Add(face);
-                        }
-                        //if (specFaces.Count != 0) mostAreaFace = specFaces.FirstOrDefault();
-                        //foreach (Face faceSpec in specFaces)
-                        //{
-                        //    if (faceSpec.Area >= mostAreaFace.Area)
-                        //    {
-                        //        xyz = XYZ.Zero;
-                        //        mostAreaFace = faceSpec;
-                        //    }
-                        //}
-                    }
-                }
+            //        }
+            //    }
+            //    else
+            //    {
+            //        foreach (var face in normalFaces)
+            //        {
+            //            //faceCenter = GetCenterOfFace(face);
+            //            //face = GetRightXYZ(face);
+            //            //if (faceCenter.Y - locCurveCenter.Y < Math.Pow(2, -40))
+            //            //{
+            //            //    specFaces.Add(face);
+            //            //}
+            //            //if (specFaces.Count != 0) mostAreaFace = specFaces.FirstOrDefault();
+            //            //foreach (Face faceSpec in specFaces)
+            //            //{
+            //            //    if (faceSpec.Area >= mostAreaFace.Area)
+            //            //    {
+            //            //        xyz = XYZ.Zero;
+            //            //        mostAreaFace = faceSpec;
+            //            //    }
+            //            //}
+            //        }
+            //    }
 
-            }
+            //}
 
-            if (mostAreaFace != null)
-            {
+            //if (mostAreaFace != null)
+            //{
 
-            }
+            //}
+
             normalFaces.Clear();
-            foreach (Face f in specFaces)
-            {
-                normalFaces.Add(f);
-            }
+            normalFaces.Add(myFace);
+
+            //foreach (Face f in specFaces)
+            //{
+            //    normalFaces.Add(f);
+            //}
 
 
             return normalFaces;
