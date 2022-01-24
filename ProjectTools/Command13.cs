@@ -22,17 +22,18 @@ namespace ProjectTools
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
     class Command13 : IExternalCommand
     {
-        private static ExternalCommandData _cachedCmdData;
-
         Document doc { get; set; }
-
+        double wallIndent { get; set; }
+        double wallGap { get; set; }
         public Result Execute(ExternalCommandData cmdData, ref string message, ElementSet elements)
         {
-            _cachedCmdData = cmdData;
 
             Application app = cmdData.Application.Application;
             UIDocument uidoc = cmdData.Application.ActiveUIDocument;
             doc = uidoc.Document;
+
+            wallGap = (50.0 * 2).ToFeet();
+            wallIndent = (20.0 * 2).ToFeet();
 
             string family_name_hole_walls_round = "М1_ОтверстиеКруглое_Стена";
             string family_name_hole_walls_square = "М1_ОтверстиеПрямоугольное_Стена";
@@ -103,56 +104,153 @@ namespace ProjectTools
             var familySymbol_hole_walls_square = doc.GetElement(family_hole_walls_square.GetFamilySymbolIds().First()) as FamilySymbol;
 
             List<XYZ> intersections = new List<XYZ>();
+            XYZ intersection = null;
             foreach (Duct duct in roundedDucts)
             {
                 foreach (Wall wall in walls)
                 {
                     Curve ductCurve = FindDuctCurve(duct, out XYZ vector, out Line line);
 
-                    XYZ intersection = null;
+                    intersections.Clear();
+                    intersection = null;
 
-                    List<Face> wallFaces = FindWallFace(wall, out double alfa, out XYZ myXYZ, out XYZ rightXYZ, out string oEdges);
+                    List<Face> wallFaces = FindWallFace(wall, out double alfa);
 
                     foreach (Face face in wallFaces)
                     {
                         intersection = FindFaceCurve(ductCurve, line, face);
-                        if (null != intersection)
+                        if (intersection != null) intersections.Add(intersection);
+                    }
+                    
+                    //XYZ upperPoint = XYZ.Zero;
+                    //XYZ lowerPoint = XYZ.Zero;
+                    XYZ middlePoint = XYZ.Zero;
+
+                    //MessageBox.Show(intersections.Count.ToString());
+
+                    if (intersections.Count == 2)
+                    {
+                        //if (intersections[0].Y > intersections[1].Y)
+                        //{
+                        //    upperPoint = new XYZ(intersections[0].X, intersections[0].Y, intersections[0].Z);
+                        //    lowerPoint = new XYZ(intersections[1].X, intersections[1].Y, intersections[1].Z);
+                        //}
+                        //else
+                        //{
+                        //    upperPoint = new XYZ(intersections[0].X, intersections[0].Y, intersections[0].Z);
+                        //    lowerPoint = new XYZ(intersections[1].X, intersections[1].Y, intersections[1].Z);
+                        //}
+
+                        // M1_ElementUniqueId M1_SystemName M1_СreationDate
+                        middlePoint = (intersections[0] + intersections[1]) / 2;
+
+                        FamilyInstance familyInstance = null;
+                        using (Transaction tr = new Transaction(doc, " create fi "))
                         {
-                            FamilyInstance familyInstance = null;
-                            using (Transaction tr = new Transaction(doc, " we "))
-                            {
-                                tr.Start();
-                                if (!familySymbol_hole_walls_round.IsActive) familySymbol_hole_walls_round.Activate();
-                                familyInstance = doc.Create.NewFamilyInstance(intersection, familySymbol_hole_walls_round, (Level)doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                XYZ point1 = new XYZ(intersection.X, intersection.Y, 0);
-                                XYZ point2 = new XYZ(intersection.X, intersection.Y, 10);
-                                Line axis = Line.CreateBound(point1, point2);
+                            tr.Start();
+                            if (!familySymbol_hole_walls_round.IsActive) familySymbol_hole_walls_round.Activate();
+                            familyInstance = doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_round, (Level)doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                            XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
+                            XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
+                            Line axis = Line.CreateBound(point1, point2);
 
-                                ElementTransformUtils.RotateElement(doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
-                                
-                                tr.Commit();
-                            }
+                            ElementTransformUtils.RotateElement(doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
+                            ElementTransformUtils.MoveElement(doc, familyInstance.Id, new XYZ(0, 0, -((Level)doc.GetElement(duct.ReferenceLevel.Id)).Elevation));
 
-                            FamilyManager fm = doc.EditFamily(familyInstance.Symbol.Family).FamilyManager;
-                            var familyParameters = fm.GetParameters();
-                            using (Transaction tr = new Transaction(doc, "asa1"))
-                            {
-                                tr.Start();
-                                familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter * 1.2);
-                                familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
-                                familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width * 1.2);
-                                familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
-                                tr.Commit();
-                            }
-
-                            intersections.Add(intersection);
+                            tr.Commit();
                         }
 
+                        FamilyManager fm = doc.EditFamily(familyInstance.Symbol.Family).FamilyManager;
+                        var familyParameters = fm.GetParameters();
+                        using (Transaction tr = new Transaction(doc, " set parameters fi "))
+                        {
+                            tr.Start();
+                            familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter + wallGap);
+                            familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + wallIndent);
+                            familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)doc.GetElement(duct.ReferenceLevel.Id)).Elevation);
+                            familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round");
+                            familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name);
+                            familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
+                            //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
+                            tr.Commit();
+                        }
                     }
                 }
             }
 
             #region rectangular
+            foreach (Duct duct in rectangularDucts)
+            {
+                foreach (Wall wall in walls)
+                {
+                    Curve ductCurve = FindDuctCurve(duct, out XYZ vector, out Line line);
+
+                    intersections.Clear();
+                    intersection = null;
+
+                    List<Face> wallFaces = FindWallFace(wall, out double alfa);
+
+                    foreach (Face face in wallFaces)
+                    {
+                        intersection = FindFaceCurve(ductCurve, line, face);
+                        if (intersection != null) intersections.Add(intersection);
+                    }
+
+                    //XYZ upperPoint = XYZ.Zero;
+                    //XYZ lowerPoint = XYZ.Zero;
+                    XYZ middlePoint = XYZ.Zero;
+
+                    //MessageBox.Show(intersections.Count.ToString());
+
+                    if (intersections.Count == 2)
+                    {
+                        //if (intersections[0].Y > intersections[1].Y)
+                        //{
+                        //    upperPoint = new XYZ(intersections[0].X, intersections[0].Y, intersections[0].Z);
+                        //    lowerPoint = new XYZ(intersections[1].X, intersections[1].Y, intersections[1].Z);
+                        //}
+                        //else
+                        //{
+                        //    upperPoint = new XYZ(intersections[0].X, intersections[0].Y, intersections[0].Z);
+                        //    lowerPoint = new XYZ(intersections[1].X, intersections[1].Y, intersections[1].Z);
+                        //}
+
+                        middlePoint = (intersections[0] + intersections[1]) / 2;
+
+                        FamilyInstance familyInstance = null;
+                        using (Transaction tr = new Transaction(doc, " create fi "))
+                        {
+                            tr.Start();
+                            if (!familySymbol_hole_walls_square.IsActive) familySymbol_hole_walls_square.Activate();
+                            familyInstance = doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_square, (Level)doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                            XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
+                            XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
+                            Line axis = Line.CreateBound(point1, point2);
+
+                            ElementTransformUtils.RotateElement(doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
+                            ElementTransformUtils.MoveElement(doc, familyInstance.Id, new XYZ(0, 0, -((Level)doc.GetElement(duct.ReferenceLevel.Id)).Elevation));
+
+                            tr.Commit();
+                        }
+
+                        FamilyManager fm = doc.EditFamily(familyInstance.Symbol.Family).FamilyManager;
+                        var familyParameters = fm.GetParameters();
+                        using (Transaction tr = new Transaction(doc, " set parameters fi "))
+                        {
+                            tr.Start();
+                            familyInstance.LookupParameter("ADSK_Размер_Ширина").Set(duct.Width + wallGap);
+                            familyInstance.LookupParameter("ADSK_Размер_Высота").Set(duct.Height + wallGap);
+                            familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + wallIndent);
+                            familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)doc.GetElement(duct.ReferenceLevel.Id)).Elevation - duct.Height / 2 - wallGap / 2);
+                            familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Rectangular");
+                            familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name);
+                            familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
+                            //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
+                            tr.Commit();
+                        }
+                    }
+                }
+            }
             //foreach (Duct duct in rectangularDucts)
             //{
             //    foreach (Wall wall in walls)
@@ -201,7 +299,7 @@ namespace ProjectTools
             //}
             #endregion
 
-            
+
 
             string output = "";
             //foreach (XYZ xyz in intersections)
@@ -255,15 +353,9 @@ namespace ProjectTools
 
             return curve;
         }
-        public List<Face> FindWallFace(Wall wall, out double alfa, out XYZ myXYZ, out XYZ locCurveRight, out string oEdges)
+        public List<Face> FindWallFace(Wall wall, out double alfa)
         {
-            XYZ faceCenter = XYZ.Zero;
-
-            myXYZ = new XYZ(-1000000000, -1000000000, 1);
-
-            //face1 = XYZ.Zero; 
             List<Face> normalFaces = new List<Face>();
-            List<Face> myFaces = new List<Face>();
 
             LocationCurve locCurve = wall.Location as LocationCurve;
 
@@ -282,9 +374,12 @@ namespace ProjectTools
             }
 
             XYZ locCurveCenter = (start + end) / 2;
-            locCurveRight = end;
 
-            if (end.X - start.X < Math.Pow(2, -40))
+            if (Math.Abs(end.X - start.X) < 0.00001)
+            {
+                alfa = Math.PI / 2;
+            }
+            else if (Math.Abs(end.Y - start.Y) < 0.00001)
             {
                 alfa = Math.PI / 2;
             }
@@ -299,9 +394,6 @@ namespace ProjectTools
 
             GeometryElement e = wall.get_Geometry(opt);
 
-            Face myFace = null;
-            Edge myEdge = null;
-            oEdges = "";
             foreach (GeometryObject obj in e)
             {
                 Solid solid = obj as Solid;
@@ -315,154 +407,8 @@ namespace ProjectTools
                             normalFaces.Add(pf);
                         }
                     }
-
-                    myFace = solid.Edges.get_Item(0).GetFace(0);
-
-                    //myEdge = solid.Edges.get_Item(0);
-
-                    List<Edge> myEdges = new List<Edge>();
-
-                    foreach (Edge edge in solid.Edges)
-                    {
-                        myEdges.Add(edge);
-                        oEdges += $"{edge.AsCurve().GetEndPoint(0).X * 304.8}\t{edge.AsCurve().GetEndPoint(0).Y * 304.8}\t{edge.AsCurve().GetEndPoint(0).Z * 304.8}\t{edge.AsCurve().GetEndPoint(1).X * 304.8}\t{edge.AsCurve().GetEndPoint(1).Y * 304.8}\t{edge.AsCurve().GetEndPoint(1).Z * 304.8}\n";
-
-                        //if (Math.Abs(edge.AsCurve().GetEndPoint(0).X - edge.AsCurve().GetEndPoint(1).X) < 0.0000001)
-                        //{
-                        //    if (Math.Abs(edge.AsCurve().GetEndPoint(0).Y - edge.AsCurve().GetEndPoint(1).Y) < 0.0000001)
-                        //    {
-                        //        myEdges.Add(edge);
-                        //        oEdges += $"{edge.AsCurve().GetEndPoint(0)}:{edge.AsCurve().GetEndPoint(1)}\n";
-                        //    }
-                        //}
-                        
-                    }
-
-                    myEdge = solid.Edges.get_Item(0);
-
-                    if (alfa + 0.001 > 0)
-                    {
-                        foreach (Edge ed in myEdges)
-                        {
-                            if (ed.AsCurve().GetEndPoint(0).Y > myEdge.AsCurve().GetEndPoint(0).Y)
-                            {
-                                myEdge = ed;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        foreach (Edge ed in myEdges)
-                        {
-                            if (ed.AsCurve().GetEndPoint(0).Y < myEdge.AsCurve().GetEndPoint(0).Y)
-                            {
-                                myEdge = ed;
-                            }
-                        }
-                    }
-                    
-                        
-
-
-
-                    if (myEdge.GetFace(0).Area >= myFace.Area - 0.001)
-                    {
-                        PlanarFace pf = myEdge.GetFace(0) as PlanarFace;
-                        if (pf != null)
-                        {
-                            myFace = pf;
-                            myXYZ = new XYZ(myEdge.AsCurve().GetEndPoint(0).X, myEdge.AsCurve().GetEndPoint(0).Y, 0);
-                        }
-                    }
-                    if (myEdge.GetFace(1).Area >= myFace.Area - 0.001)
-                    {
-                        PlanarFace pf = myEdge.GetFace(1) as PlanarFace;
-                        if (pf != null)
-                        {
-                            myFace = pf;
-                            myXYZ = new XYZ(myEdge.AsCurve().GetEndPoint(0).X, myEdge.AsCurve().GetEndPoint(0).Y, 0);
-                        }
-                    }
-
-
-
                 }
             }
-
-
-            //List<Face> specFaces = new List<Face>();
-            //Face mostAreaFace = null;
-
-            //if (normalFaces.Count > 2)
-            //{
-            //    if (alfa >= 0)
-            //    {
-            //        foreach (var face in normalFaces)
-            //        {
-            //            var curveLoops = face.GetEdgesAsCurveLoops();
-            //            foreach(var curveLoop in curveLoops)
-            //            {
-            //                List<XYZ> pts = new List<XYZ>();
-            //                foreach (Curve c in curveLoop)
-            //                {
-            //                    pts.AddRange(c.Tessellate());
-            //                }
-            //                BoundingBoxXYZ bb = new BoundingBoxXYZ();
-            //                bb.set_Bounds()
-            //            }
-                        //faceCenter = GetCenterOfFace(face);
-                        //face = GetRightXYZ(face);
-                        //if (faceCenter.Y - locCurveCenter.Y > Math.Pow(2, -40))
-                        //{
-                        //    specFaces.Add(face);
-                        //}
-                        //if (specFaces.Count != 0) mostAreaFace = specFaces.FirstOrDefault();
-                        //foreach (Face faceSpec in specFaces)
-                        //{
-                        //    if (faceSpec.Area >= mostAreaFace.Area)
-                        //    {
-                        //        xyz = XYZ.Zero;
-                        //        mostAreaFace = faceSpec;
-                        //    }
-                        //}
-            //        }
-            //    }
-            //    else
-            //    {
-            //        foreach (var face in normalFaces)
-            //        {
-            //            //faceCenter = GetCenterOfFace(face);
-            //            //face = GetRightXYZ(face);
-            //            //if (faceCenter.Y - locCurveCenter.Y < Math.Pow(2, -40))
-            //            //{
-            //            //    specFaces.Add(face);
-            //            //}
-            //            //if (specFaces.Count != 0) mostAreaFace = specFaces.FirstOrDefault();
-            //            //foreach (Face faceSpec in specFaces)
-            //            //{
-            //            //    if (faceSpec.Area >= mostAreaFace.Area)
-            //            //    {
-            //            //        xyz = XYZ.Zero;
-            //            //        mostAreaFace = faceSpec;
-            //            //    }
-            //            //}
-            //        }
-            //    }
-
-            //}
-
-            //if (mostAreaFace != null)
-            //{
-
-            //}
-
-            normalFaces.Clear();
-            normalFaces.Add(myFace);
-
-            //foreach (Face f in specFaces)
-            //{
-            //    normalFaces.Add(f);
-            //}
 
 
             return normalFaces;
@@ -493,8 +439,7 @@ namespace ProjectTools
             }
             return intersectionResult;
         }
-
-        public XYZ GetCenterOfFace(Face face)
+        public XYZ FindCenterOfFace(Face face)
         {
             double CurvePoints_Umin = double.MaxValue;
             double CurvePoints_Umax = double.MinValue;
@@ -520,26 +465,9 @@ namespace ProjectTools
             return face.Evaluate(uvCenter);
         }
 
-        public XYZ GetRightXYZ(Face face)
-        {
-            XYZ xyz = new XYZ(double.MinValue, double.MinValue, double.MinValue);
-
-            foreach (EdgeArray edgeArray in face.EdgeLoops)
-            {
-                foreach (Edge edge in edgeArray)
-                {
-                    if (edge.AsCurve().GetEndPoint(0).X > xyz.X) xyz = new XYZ(edge.AsCurve().GetEndPoint(0).X, edge.AsCurve().GetEndPoint(0).Y, edge.AsCurve().GetEndPoint(0).Z);
-                    if (edge.AsCurve().GetEndPoint(1).X > xyz.X) xyz = new XYZ(edge.AsCurve().GetEndPoint(1).X, edge.AsCurve().GetEndPoint(1).Y, edge.AsCurve().GetEndPoint(1).Z);
-                }
-            }
-
-
-            return xyz;
-        }
-
     }
 
-    public static class LineExtension
+    public static class HereExtensions
     {
         static readonly double EPSILON = Math.Pow(2, -52);
         public static bool Contains(this Line line, XYZ point)
@@ -548,6 +476,14 @@ namespace ProjectTools
             XYZ b = line.GetEndPoint(1); // Line end point
             XYZ p = point;
             return (Math.Abs(a.DistanceTo(b) - (a.DistanceTo(p) + p.DistanceTo(b))) < EPSILON * 1000);
+        }
+        public static double ToMM(this double input)
+        {
+            return input * 304.8;
+        }
+        public static double ToFeet(this double input)
+        {
+            return input / 304.8;
         }
 
     }
