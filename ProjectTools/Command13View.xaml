@@ -1,0 +1,99 @@
+﻿<Window x:Class="ProjectTools.Command13View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ProjectTools"
+             mc:Ignorable="d" Topmost="True" 
+             Title="Создание отверстий в стенах и перекрытиях" Width="350" Height="450" WindowStartupLocation="Manual">
+    <Window.DataContext>
+        <local:Command13ViewModel/>
+    </Window.DataContext>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="15" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="15" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20" />
+            <RowDefinition Height="180" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="140" />
+            <RowDefinition Height="40" />
+            <RowDefinition Height="20" />
+            <RowDefinition Height="5" />
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="1" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="70" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="70" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Grid.Column="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="25" />
+                    <RowDefinition Height="35" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Label Grid.Row="1" Content="Зазор:" FontWeight="DemiBold" Margin="5 0 0 0"/>
+                <TextBox Grid.Row="2" Text="{Binding Path=WallGap}" Width="50" Height="28" Margin="15 0 0 0"
+                         PreviewTextInput="OnPreviewTextInput" BorderBrush="DarkSlateBlue" 
+                         FontSize="16" FontWeight="DemiBold" BorderThickness="0 0 0 1" VerticalContentAlignment="Bottom"
+                         HorizontalAlignment="Center" HorizontalContentAlignment="Center"></TextBox>
+            </Grid>
+            <Grid Grid.Row="2" Grid.Column="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="25" />
+                    <RowDefinition Height="35" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Label Grid.Row="1" Content="Отступ от стены:" FontWeight="DemiBold" Margin="5 0 0 0"/>
+                <TextBox Grid.Row="2" Text="{Binding Path=WallIndent}" Width="50" Height="28" Margin="15 0 0 0"
+                         PreviewTextInput="OnPreviewTextInput" BorderBrush="DarkSlateBlue" 
+                         FontSize="16" FontWeight="DemiBold" BorderThickness="0 0 0 1" VerticalContentAlignment="Bottom"
+                         HorizontalAlignment="Center" HorizontalContentAlignment="Center"></TextBox>
+            </Grid>
+            <Image Grid.Row="0" Grid.Column="0" Source="pack://application:,,,/ProjectTools;component/res/wallgapexample.png" Height="120" Width="120" VerticalAlignment="Center"/>
+            <Image Grid.Row="2" Grid.Column="0" Source="pack://application:,,,/ProjectTools;component/res/wallindentexample.png" Height="120" Width="120" VerticalAlignment="Center"/>
+        </Grid>
+        <Grid Grid.Row="3" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="5" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="10" />
+            </Grid.RowDefinitions>
+            <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding Path=RoundedDucts}" Content="Вентиляция круглого сечения" />
+            <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding Path=RectangDucts}" Content="Вентиляция прямоугольного сечения" />
+            <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding Path=RoundedPipes}" Content="Трубы" />
+            
+            <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding Path=InWalls}" Content="В стенах" />
+            <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding Path=InFloors}" Content="В перекрытиях" />
+        </Grid>
+        <Button Content="Применить" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Stretch"  VerticalAlignment="Stretch" Click="OnClickApply" />
+        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Path=Statusik}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+    </Grid>
+    
+</Window>

@@ -92,6 +92,10 @@
     <Compile Include="Command11.cs" />
     <Compile Include="Command12.cs" />
     <Compile Include="Command13.cs" />
+    <Compile Include="Command13View.xaml.cs">
+      <DependentUpon>Command13View.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Command13ViewModel.cs" />
     <Compile Include="FilePathViewModel.cs" />
     <Compile Include="FlowDocumentForReport.cs" />
     <Compile Include="FOP.cs" />
@@ -100,6 +104,7 @@
     <Compile Include="ParameterAndFamily.cs" />
     <Compile Include="ParameterViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RelayCommand.cs" />
     <Compile Include="ReportWindow.xaml.cs">
       <DependentUpon>ReportWindow.xaml</DependentUpon>
     </Compile>
@@ -166,6 +171,8 @@
     <Content Include="res\wall.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Resource Include="res\wallgapexample.png" />
+    <Resource Include="res\wallindentexample.png" />
     <Content Include="res\zero-point.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -193,6 +200,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Command06_Window01.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Command13View.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
