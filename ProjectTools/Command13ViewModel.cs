@@ -202,6 +202,7 @@ namespace ProjectTools
         public double WallIndent { get; set; }
         public Document Doc { get; set; }
         public Command13ViewModel ViewModel { get; set; }
+        public Window Window { get; set; }
         #endregion
         public void Execute(UIApplication uiapp)
         {
@@ -234,10 +235,11 @@ namespace ProjectTools
             ViewModel.Statusik = $"загрузка семейства {family_name_hole_floors_rectang}";
             LoadFamily(Doc, family_name_hole_floors_rectang, path_hole_floors_rectang);
 
+
             var rvtLinksList = new FilteredElementCollector(Doc).OfCategory(BuiltInCategory.OST_RvtLinks).WhereElementIsNotElementType().Cast<RevitLinkInstance>().ToList();
 
             ViewModel.Statusik = $"выбор связи ...";
-            //MessageBox.Show("Выберите связь АР или КР");
+            MessageBox.Show("Выберите связь АР или КР");
            
             Selection sel = uidoc.Selection;
 
@@ -250,24 +252,86 @@ namespace ProjectTools
             {
                 var revitLinkDoc = Doc.GetElement(pickedRef.ElementId) as RevitLinkInstance;
                 ViewModel.Statusik = $"связь {revitLinkDoc.Name}";
-                walls = new FilteredElementCollector(revitLinkDoc.GetLinkDocument()).OfCategory(BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements().Cast<Wall>().ToList();
-                floors = new FilteredElementCollector(revitLinkDoc.GetLinkDocument()).OfCategory(BuiltInCategory.OST_Floors).WhereElementIsNotElementType().ToElements().Cast<Floor>().ToList();
-                
-                foreach (Wall wall in walls)
-                {
 
+                var durtyWalls = new FilteredElementCollector(revitLinkDoc.GetLinkDocument()).OfCategory(BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements().ToList();
+                var durtyFloors = new FilteredElementCollector(revitLinkDoc.GetLinkDocument()).OfCategory(BuiltInCategory.OST_Floors).WhereElementIsNotElementType().ToElements().ToList();
+#if DEBUG 
+                MessageBox.Show($"гр. стен: {durtyWalls.Count}\nгр. перекр.: {durtyFloors.Count}");
+#endif
+                foreach (var dwall in durtyWalls)
+                {
+                    try
+                    {
+                        Wall myWall = (Wall)dwall;
+                        walls.Add(myWall);
+                    }
+                    catch (Exception ex)
+                    {
+#if DEBUG
+                        MessageBox.Show($"стена {dwall.Id} на кастомизируется");
+#endif
+                    }
                 }
 
-                foreach (Floor floor in floors)
+                foreach (var dfloor in durtyFloors)
                 {
-
+                    try
+                    {
+                        Floor myFloor = (Floor)dfloor;
+                        floors.Add(myFloor);
+                    }
+                    catch (Exception ex)
+                    {
+#if DEBUG
+                        MessageBox.Show($"перекр. {dfloor.Id} на кастомизируется");
+#endif
+                    }
                 }
-
-                //MessageBox.Show(walls.Count.ToString());
+#if DEBUG
+                MessageBox.Show($"стен: {walls.Count}\nперекр.: {floors.Count}");
+#endif
             }
 
-            var ducts = new FilteredElementCollector(Doc).OfCategory(BuiltInCategory.OST_DuctCurves).WhereElementIsNotElementType().Cast<Duct>().ToList();
-            var pipes = new FilteredElementCollector(Doc).OfCategory(BuiltInCategory.OST_PipeCurves).WhereElementIsNotElementType().Cast<Pipe>().ToList();
+            List<Duct> ducts = new List<Duct>();
+            List<Pipe> pipes = new List<Pipe>();
+
+            var dirtyDucts = new FilteredElementCollector(Doc).OfCategory(BuiltInCategory.OST_DuctCurves).WhereElementIsNotElementType().ToElements().ToList();
+            var dirtyPipes = new FilteredElementCollector(Doc).OfCategory(BuiltInCategory.OST_PipeCurves).WhereElementIsNotElementType().ToElements().ToList();
+#if DEBUG
+            MessageBox.Show($"гр. возд.: {dirtyDucts.Count}\nгр. труб: {dirtyPipes.Count}");
+#endif
+            foreach (var dduct in dirtyDucts)
+            {
+                try
+                {
+                    Duct myDuct = (Duct)dduct;
+                    ducts.Add(myDuct);
+                }
+                catch (Exception ex)
+                {
+#if DEBUG
+                    MessageBox.Show($"возд. {dduct.Id} на кастомизируется");
+#endif
+                }
+            }
+
+            foreach (var dpipe in dirtyPipes)
+            {
+                try
+                {
+                    Pipe myPipe = (Pipe)dpipe;
+                    pipes.Add(myPipe);
+                }
+                catch (Exception ex)
+                {
+#if DEBUG
+                    MessageBox.Show($"труба {dpipe.Id} на кастомизируется");
+#endif
+                }
+            }
+#if DEBUG
+            MessageBox.Show($"возд.: {ducts.Count}\nтруб: {pipes.Count}");
+#endif
 
             List<Duct> roundedDucts = new List<Duct>();
             List<Duct> rectangularDucts = new List<Duct>();
@@ -294,8 +358,37 @@ namespace ProjectTools
                 roundedPipes.Add(p);
             }
 
+            List<string> paramNames = new List<string>(new string[] { "M1_ForElements", "M1_ElementMask", "M1_SystemName", "M1_СreationDate" });
+
             var family_hole_walls_round = new FilteredElementCollector(Doc).OfClass(typeof(Family)).Where(x => x.Name == family_name_hole_walls_round).Cast<Family>().ToList().First();
             var familySymbol_hole_walls_round = Doc.GetElement(family_hole_walls_round.GetFamilySymbolIds().First()) as FamilySymbol;
+
+            FamilyManager familyManager = Doc.EditFamily(family_hole_walls_round).FamilyManager;
+            var fParameters = familyManager.GetParameters();
+            using (Transaction trans = new Transaction(Doc, $"Create parameters in Family {family_name_hole_walls_round}"))
+            {
+                trans.Start();
+                try
+                {
+                    foreach (string pName in paramNames)
+                    {
+                        bool parameterExists = false;
+                        foreach (FamilyParameter fp in fParameters)
+                        {
+                            if (fp.Definition.Name == pName) parameterExists = true;
+                        }
+                        if (!parameterExists) familyManager.AddParameter(pName, BuiltInParameterGroup.INVALID, ParameterType.Text, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+#if DEBUG
+                    MessageBox.Show(ex.ToString());
+#endif
+                }
+
+                trans.Commit();
+            }
 
             var family_hole_walls_rectang = new FilteredElementCollector(Doc).OfClass(typeof(Family)).Where(x => x.Name == family_name_hole_walls_rectang).Cast<Family>().ToList().First();
             var familySymbol_hole_walls_rectang = Doc.GetElement(family_hole_walls_rectang.GetFamilySymbolIds().First()) as FamilySymbol;
@@ -317,7 +410,7 @@ namespace ProjectTools
             if (ViewModel.RoundedDucts && ViewModel.InWalls)
             {
                 familyCollection = new FilteredElementCollector(Doc).OfClass(typeof(FamilyInstance)).Cast<FamilyInstance>().Where(x => x.Symbol.Family.Name == family_name_hole_walls_round).ToList();
-                MessageBox.Show($"ro.du.{familyCollection.Count}");
+                //MessageBox.Show($"ro.du.{familyCollection.Count}");
                 foreach (Duct duct in roundedDucts)
                 {
                     foreach (Wall wall in walls)
@@ -362,25 +455,50 @@ namespace ProjectTools
                             }
                             catch (Exception ex)
                             {
+#if DEBUG
                                 MessageBox.Show(ex.ToString());
+#endif
                             }
 
                             FamilyInstance familyInstance = null;
+                            double kIncrease = 1;
 
                             if (!familyIsInPoint)
                             {
                                 using (Transaction tr = new Transaction(Doc, " create fi "))
                                 {
                                     tr.Start();
-                                    if (!familySymbol_hole_walls_round.IsActive) familySymbol_hole_walls_round.Activate();
-                                    familyInstance = Doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_round, (Level)Doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                    XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
-                                    XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
-                                    Line axis = Line.CreateBound(point1, point2);
+                                    try
+                                    {
+                                        if (!familySymbol_hole_walls_round.IsActive) familySymbol_hole_walls_round.Activate();
+                                        familyInstance = Doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_round, (Level)Doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                        XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
+                                        XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
+                                        Line axis = Line.CreateBound(point1, point2);
 
-                                    ElementTransformUtils.RotateElement(Doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
-                                    ElementTransformUtils.MoveElement(Doc, familyInstance.Id, new XYZ(0, 0, -((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation));
+                                        XYZ orientation = wall.Orientation;
+                                        double angle = 0;
+                                        //if (orientation.X == 0 && orientation.Y == 0) angle = 0;
+                                        if (orientation.X <= 0 && orientation.Y <= 0) angle = Math.Asin(orientation.X);
+                                        else if (orientation.X < 0 && orientation.Y > 0) angle = -Math.Asin(orientation.X);
+                                        else if (orientation.X > 0 && orientation.Y <= 0) angle = Math.Asin(orientation.X);
+                                        else if (orientation.X > 0 && orientation.Y > 0) angle = -Math.Asin(orientation.X);
 
+                                        LocationCurve lcurve = (LocationCurve)duct.Location;
+                                        Curve curve = lcurve.Curve;
+                                        Line curveline = (Line)curve;
+                                        double delta = Math.Sin(Math.Abs(Math.Abs(curveline.Direction.X) - Math.Abs(orientation.X)));
+                                        if (delta > 0.00001) kIncrease = 1 + delta;
+
+                                        ElementTransformUtils.RotateElement(Doc, familyInstance.Id, axis, angle); // vector.AngleTo(XYZ.BasisY));
+                                        ElementTransformUtils.MoveElement(Doc, familyInstance.Id, new XYZ(0, 0, -((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation));
+                                    }
+                                    catch (Exception ex)
+                                    {
+#if DEBUG
+                                        MessageBox.Show(ex.ToString());
+#endif
+                                    }
                                     tr.Commit();
                                 }
 
@@ -389,13 +507,13 @@ namespace ProjectTools
                                 using (Transaction tr = new Transaction(Doc, " set parameters fi "))
                                 {
                                     tr.Start();
-                                    familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter + WallGap);
-                                    familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + WallIndent);
-                                    familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation);
-                                    familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Wall");
-                                    familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name);
-                                    familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
-                                    //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter * kIncrease * kIncrease + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + WallIndent); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ForElements").Set(duct.Id.IntegerValue.ToString() + " in " + wall.Id.IntegerValue.ToString()); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Wall"); } catch { };
+                                    try { familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name); } catch { };
+                                    try { familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}"); } catch { };
                                     tr.Commit();
                                 }
                             }
@@ -413,7 +531,7 @@ namespace ProjectTools
             if (ViewModel.RectangDucts && ViewModel.InWalls)
             {
                 familyCollection = new FilteredElementCollector(Doc).OfClass(typeof(FamilyInstance)).Cast<FamilyInstance>().Where(x => x.Symbol.Family.Name == family_name_hole_walls_rectang).ToList();
-                MessageBox.Show($"re.du.{familyCollection.Count}");
+                //MessageBox.Show($"re.du.{familyCollection.Count}");
                 foreach (Duct duct in rectangularDucts)
                 {
                     foreach (Wall wall in walls)
@@ -456,25 +574,51 @@ namespace ProjectTools
                             }
                             catch (Exception ex)
                             {
+#if DEBUG
                                 MessageBox.Show(ex.ToString());
+#endif
                             }
 
                             FamilyInstance familyInstance = null;
-
+                            double kIncrease = 1;
                             if (!familyIsInPoint)
                             {
                                 using (Transaction tr = new Transaction(Doc, " create fi "))
                                 {
                                     tr.Start();
-                                    if (!familySymbol_hole_walls_rectang.IsActive) familySymbol_hole_walls_rectang.Activate();
-                                    familyInstance = Doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_rectang, (Level)Doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                    XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
-                                    XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
-                                    Line axis = Line.CreateBound(point1, point2);
+                                    try
+                                    {
+                                        if (!familySymbol_hole_walls_rectang.IsActive) familySymbol_hole_walls_rectang.Activate();
+                                        familyInstance = Doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_rectang, (Level)Doc.GetElement(duct.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                        XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
+                                        XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
+                                        Line axis = Line.CreateBound(point1, point2);
 
-                                    ElementTransformUtils.RotateElement(Doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
-                                    ElementTransformUtils.MoveElement(Doc, familyInstance.Id, new XYZ(0, 0, -((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation));
+                                        XYZ orientation = wall.Orientation;
+                                        double angle = 0;
+                                        //if (orientation.X == 0 && orientation.Y == 0) angle = 0;
+                                        if(orientation.X <= 0 && orientation.Y <= 0) angle = Math.Asin(orientation.X);
+                                        else if (orientation.X < 0 && orientation.Y > 0) angle = -Math.Asin(orientation.X);
+                                        else if (orientation.X > 0 && orientation.Y <= 0) angle = Math.Asin(orientation.X);
+                                        else if (orientation.X > 0 && orientation.Y > 0) angle = -Math.Asin(orientation.X);
+                                            
 
+                                        
+                                        LocationCurve lcurve = (LocationCurve)duct.Location;
+                                        Curve curve = lcurve.Curve;
+                                        Line curveline = (Line)curve;
+                                        double delta = Math.Sin(Math.Abs(Math.Abs(curveline.Direction.X) - Math.Abs(orientation.X)));
+                                        if (delta > 0.00001) kIncrease = 1 + delta;
+
+                                        ElementTransformUtils.RotateElement(Doc, familyInstance.Id, axis, angle); // vector.AngleTo(XYZ.BasisY));
+                                        ElementTransformUtils.MoveElement(Doc, familyInstance.Id, new XYZ(0, 0, -((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation));
+                                    }
+                                    catch (Exception ex)
+                                    {
+#if DEBUG
+                                        MessageBox.Show(ex.ToString());
+#endif
+                                    }
                                     tr.Commit();
                                 }
 
@@ -483,14 +627,14 @@ namespace ProjectTools
                                 using (Transaction tr = new Transaction(Doc, " set parameters fi "))
                                 {
                                     tr.Start();
-                                    familyInstance.LookupParameter("ADSK_Размер_Ширина").Set(duct.Width + WallGap);
-                                    familyInstance.LookupParameter("ADSK_Размер_Высота").Set(duct.Height + WallGap);
-                                    familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + WallIndent);
-                                    familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation - duct.Height / 2 - WallGap / 2);
-                                    familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Rectangular_Wall");
-                                    familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name);
-                                    familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
-                                    //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Ширина").Set(duct.Width * kIncrease * kIncrease + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Высота").Set(duct.Height + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + WallIndent); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)Doc.GetElement(duct.ReferenceLevel.Id)).Elevation - duct.Height / 2 - WallGap / 2); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ForElements").Set(duct.Id.IntegerValue.ToString() + " in " + wall.Id.IntegerValue.ToString()); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Rectangular_Wall"); } catch { };
+                                    try { familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name); } catch { };
+                                    try { familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}"); } catch { };
                                     tr.Commit();
                                 }
                             }
@@ -508,7 +652,7 @@ namespace ProjectTools
             if (ViewModel.RoundedPipes && ViewModel.InWalls)
             {
                 familyCollection = new FilteredElementCollector(Doc).OfClass(typeof(FamilyInstance)).Cast<FamilyInstance>().Where(x => x.Symbol.Family.Name == family_name_hole_walls_round).ToList();
-                MessageBox.Show($"re.pi.{familyCollection.Count}");
+                //MessageBox.Show($"re.pi.{familyCollection.Count}");
                 foreach (Pipe pipe in roundedPipes)
                 {
                     foreach (Wall wall in walls)
@@ -551,25 +695,50 @@ namespace ProjectTools
                             }
                             catch (Exception ex)
                             {
-                                //MessageBox.Show(ex.ToString());
+#if DEBUG
+                                MessageBox.Show(ex.ToString());
+#endif
                             }
 
                             FamilyInstance familyInstance = null;
-                            
+                            double kIncrease = 1;
+
                             if (!familyIsInPoint)
                             {
                                 using (Transaction tr = new Transaction(Doc, " create fi "))
                                 {
                                     tr.Start();
-                                    if (!familySymbol_hole_walls_round.IsActive) familySymbol_hole_walls_round.Activate();
-                                    familyInstance = Doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_round, (Level)Doc.GetElement(pipe.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                    XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
-                                    XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
-                                    Line axis = Line.CreateBound(point1, point2);
+                                    try
+                                    {
+                                        if (!familySymbol_hole_walls_round.IsActive) familySymbol_hole_walls_round.Activate();
+                                        familyInstance = Doc.Create.NewFamilyInstance(middlePoint, familySymbol_hole_walls_round, (Level)Doc.GetElement(pipe.ReferenceLevel.Id), Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                        XYZ point1 = new XYZ(middlePoint.X, middlePoint.Y, 0);
+                                        XYZ point2 = new XYZ(middlePoint.X, middlePoint.Y, 10);
+                                        Line axis = Line.CreateBound(point1, point2);
 
-                                    ElementTransformUtils.RotateElement(Doc, familyInstance.Id, axis, vector.AngleTo(XYZ.BasisY));
-                                    ElementTransformUtils.MoveElement(Doc, familyInstance.Id, new XYZ(0, 0, -((Level)Doc.GetElement(pipe.ReferenceLevel.Id)).Elevation));
+                                        XYZ orientation = wall.Orientation;
+                                        double angle = 0;
+                                        //if (orientation.X == 0 && orientation.Y == 0) angle = 0;
+                                        if (orientation.X <= 0 && orientation.Y <= 0) angle = Math.Asin(orientation.X);
+                                        else if (orientation.X < 0 && orientation.Y > 0) angle = -Math.Asin(orientation.X);
+                                        else if (orientation.X > 0 && orientation.Y <= 0) angle = Math.Asin(orientation.X);
+                                        else if (orientation.X > 0 && orientation.Y > 0) angle = -Math.Asin(orientation.X);
 
+                                        LocationCurve lcurve = (LocationCurve)pipe.Location;
+                                        Curve curve = lcurve.Curve;
+                                        Line curveline = (Line)curve;
+                                        double delta = Math.Sin(Math.Abs(Math.Abs(curveline.Direction.X) - Math.Abs(orientation.X)));
+                                        if (delta > 0.00001) kIncrease = 1 + delta;
+
+                                        ElementTransformUtils.RotateElement(Doc, familyInstance.Id, axis, angle); // vector.AngleTo(XYZ.BasisY));
+                                        ElementTransformUtils.MoveElement(Doc, familyInstance.Id, new XYZ(0, 0, -((Level)Doc.GetElement(pipe.ReferenceLevel.Id)).Elevation));
+                                    }
+                                    catch (Exception ex)
+                                    {
+#if DEBUG
+                                        MessageBox.Show(ex.ToString());
+#endif
+                                    }
                                     tr.Commit();
                                 }
 
@@ -578,13 +747,13 @@ namespace ProjectTools
                                 using (Transaction tr = new Transaction(Doc, " set parameters fi "))
                                 {
                                     tr.Start();
-                                    familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(pipe.Diameter + WallGap);
-                                    familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + WallIndent);
-                                    familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)Doc.GetElement(pipe.ReferenceLevel.Id)).Elevation);
-                                    familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Wall");
-                                    familyInstance.LookupParameter("M1_SystemName").Set(pipe.MEPSystem.Name);
-                                    familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
-                                    //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(pipe.Diameter * kIncrease * kIncrease + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(wall.Width + WallIndent); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Отверстие_Отметка от нуля").Set(middlePoint.Z - ((Level)Doc.GetElement(pipe.ReferenceLevel.Id)).Elevation); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ForElements").Set(pipe.Id.IntegerValue.ToString() + " in " + wall.Id.IntegerValue.ToString()); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Wall"); } catch { };
+                                    try { familyInstance.LookupParameter("M1_SystemName").Set(pipe.MEPSystem.Name); } catch { };
+                                    try { familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}"); } catch { };
                                     tr.Commit();
                                 }
                             }    
@@ -650,7 +819,9 @@ namespace ProjectTools
                             }
                             catch (Exception ex)
                             {
+#if DEBUG
                                 MessageBox.Show(ex.ToString());
+#endif
                             }
 
                             FamilyInstance familyInstance = null;
@@ -681,7 +852,9 @@ namespace ProjectTools
                                     }
                                     catch (Exception ex)
                                     {
-                                        MessageBox.Show("1: " + ex.ToString());
+#if DEBUG
+                                        MessageBox.Show(ex.ToString());
+#endif
                                     }
 
                                     tr.Commit();
@@ -692,21 +865,12 @@ namespace ProjectTools
                                 using (Transaction tr = new Transaction(Doc, " set parameters fi "))
                                 {
                                     tr.Start();
-                                    try
-                                    {
-                                        familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter + WallGap);
-                                        FloorType ft = (FloorType)Doc.GetElement(floor.GetTypeId());
-                                        familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(ft.GetCompoundStructure().GetWidth() + WallIndent); // --------------------------------------------------------------------------------------------------------------------------------------
-                                        familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Floor");
-                                        familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name);
-                                        familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
-                                        //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        MessageBox.Show("2: " + ex.ToString());
-                                    }
-
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(duct.Diameter + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(((FloorType)Doc.GetElement(floor.GetTypeId())).GetCompoundStructure().GetWidth() + WallIndent); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ForElements").Set(duct.Id.IntegerValue.ToString() + " in " + floor.Id.IntegerValue.ToString()); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Floor"); } catch { };
+                                    try { familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name); } catch { };
+                                    try { familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}"); } catch { };
                                     tr.Commit();
                                 }
                             }
@@ -773,7 +937,9 @@ namespace ProjectTools
                             }
                             catch (Exception ex)
                             {
+#if DEBUG
                                 MessageBox.Show(ex.ToString());
+#endif
                             }
 
                             FamilyInstance familyInstance = null;
@@ -804,9 +970,10 @@ namespace ProjectTools
                                     }
                                     catch (Exception ex)
                                     {
-                                        MessageBox.Show("1: " + ex.ToString());
+#if DEBUG
+                                        MessageBox.Show(ex.ToString());
+#endif
                                     }
-
                                     tr.Commit();
                                 }
 
@@ -815,22 +982,13 @@ namespace ProjectTools
                                 using (Transaction tr = new Transaction(Doc, " set parameters fi "))
                                 {
                                     tr.Start();
-                                    try
-                                    {
-                                        familyInstance.LookupParameter("ADSK_Размер_Ширина").Set(duct.Width + WallGap);
-                                        familyInstance.LookupParameter("ADSK_Размер_Высота").Set(duct.Height + WallGap);
-                                        FloorType ft = (FloorType)Doc.GetElement(floor.GetTypeId());
-                                        familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(ft.GetCompoundStructure().GetWidth() + WallIndent); // --------------------------------------------------------------------------------------------------------------------------------------
-                                        familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Rectangular_Floor");
-                                        familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name);
-                                        familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
-                                        //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        MessageBox.Show("2: " + ex.ToString());
-                                    }
-
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Ширина").Set(duct.Width + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Высота").Set(duct.Height + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(((FloorType)Doc.GetElement(floor.GetTypeId())).GetCompoundStructure().GetWidth() + WallIndent); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ForElements").Set(duct.Id.IntegerValue.ToString() + " in " + floor.Id.IntegerValue.ToString()); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Rectangular_Floor"); } catch { };
+                                    try { familyInstance.LookupParameter("M1_SystemName").Set(duct.MEPSystem.Name); } catch { };
+                                    try { familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}"); } catch { };
                                     tr.Commit();
                                 }
                             }
@@ -848,7 +1006,7 @@ namespace ProjectTools
             if (ViewModel.RoundedPipes && ViewModel.InFloors)
             {
                 familyCollection = new FilteredElementCollector(Doc).OfClass(typeof(FamilyInstance)).Cast<FamilyInstance>().Where(x => x.Symbol.Family.Name == family_name_hole_floors_round).ToList();
-                //MessageBox.Show($"ro.du.floor {familyCollection.Count}");
+
                 foreach (Pipe pipe in roundedPipes)
                 {
                     foreach (Floor floor in floors)
@@ -897,7 +1055,9 @@ namespace ProjectTools
                             }
                             catch (Exception ex)
                             {
+#if DEBUG
                                 MessageBox.Show(ex.ToString());
+#endif
                             }
 
                             FamilyInstance familyInstance = null;
@@ -928,9 +1088,10 @@ namespace ProjectTools
                                     }
                                     catch (Exception ex)
                                     {
-                                        MessageBox.Show("1: " + ex.ToString());
+#if DEBUG
+                                        MessageBox.Show(ex.ToString());
+#endif
                                     }
-
                                     tr.Commit();
                                 }
 
@@ -939,21 +1100,12 @@ namespace ProjectTools
                                 using (Transaction tr = new Transaction(Doc, " set parameters fi "))
                                 {
                                     tr.Start();
-                                    try
-                                    {
-                                        familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(pipe.Diameter + WallGap);
-                                        FloorType ft = (FloorType)Doc.GetElement(floor.GetTypeId());
-                                        familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(ft.GetCompoundStructure().GetWidth() + WallIndent); 
-                                        familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Floor");
-                                        familyInstance.LookupParameter("M1_SystemName").Set(pipe.MEPSystem.Name);
-                                        familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}");
-                                        //familyInstance.LookupParameter("Data").Set((alfa * 180 / Math.PI).ToString() + " : " + $"({myXYZ.X * 304.8}, {myXYZ.Y * 304.8})" + " : " + $"({rightXYZ.X * 304.8}, {rightXYZ.Y * 304.8})\n:::\n" + oEdges);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        MessageBox.Show("2: " + ex.ToString());
-                                    }
-
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Диаметр").Set(pipe.Diameter + WallGap); } catch { };
+                                    try { familyInstance.LookupParameter("ADSK_Размер_Глубина").Set(((FloorType)Doc.GetElement(floor.GetTypeId())).GetCompoundStructure().GetWidth() + WallIndent); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ForElements").Set(pipe.Id.IntegerValue.ToString() + " in " + floor.Id.IntegerValue.ToString()); } catch { };
+                                    try { familyInstance.LookupParameter("M1_ElementMask").Set("M1_Void_Round_Floor"); } catch { };
+                                    try { familyInstance.LookupParameter("M1_SystemName").Set(pipe.MEPSystem.Name); } catch { };
+                                    try { familyInstance.LookupParameter("M1_СreationDate").Set($"{DateTime.Now.ToString("dd/MM/yyyy")}"); } catch { };
                                     tr.Commit();
                                 }
                             }
@@ -967,13 +1119,13 @@ namespace ProjectTools
             #endregion
 
             ViewModel.Statusik = $" - установка всех отверстий завершена - ";
+            Window.Close();
         }
 
         public string GetName()
         {
             return "CreateVoids";
         }
-
         private void LoadFamily(Document doc, string name, string path)
         {
             var families = new FilteredElementCollector(doc).OfClass(typeof(Family));
@@ -1243,11 +1395,18 @@ namespace ProjectTools
 
         public bool AllowElement(Element elem)
         {
-            if (elem.Category.Id.IntegerValue == (int)BuiltInCategory.OST_RvtLinks)
+            if (elem.Category != null)
             {
-                return true;
+                if (elem.Category.Id.IntegerValue == -2001352) //(int)BuiltInCategory.OST_RvtLinks)
+                {
+                    return true;
+                }
             }
-            return true;
+            else
+            {
+                return false;
+            }
+            return false;
         }
 
         public bool AllowReference(Reference reference, XYZ position)

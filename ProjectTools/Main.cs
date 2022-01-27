@@ -33,7 +33,7 @@ namespace ProjectTools
             UserFolder = @"C:\Users\" + Environment.UserName;
 
             #region Buttons
-
+            
             PulldownButtonData NavisPulldownButtonData = new PulldownButtonData("NavisPulldownButtonData", "Navis");
             PulldownButton NavisPulldownButton = panel.AddItem(NavisPulldownButtonData) as PulldownButton;
             NavisPulldownButton.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\navis-view-plus-3.png", UriKind.Absolute));
@@ -172,7 +172,7 @@ namespace ProjectTools
             ChangeFloorMaterialBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\floor.png", UriKind.Absolute));
 
             panel.AddSeparator();
-
+            
             var AutoHolesBtnData = new PushButtonData("AutoHolesBtnData", "Расставить\nзаглушки отверстий", DllLocation, "ProjectTools.Command13")
             {
                 ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\holes.png", UriKind.Absolute)),
@@ -181,42 +181,6 @@ namespace ProjectTools
             var AutoHolesBtn = panel.AddItem(AutoHolesBtnData) as PushButton;
             AutoHolesBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\holes.png", UriKind.Absolute));
 
-
-            //PushButtonData ButtonDataQ = new PushButtonData("ButtonDataQ", "Проверить\nпараметры", DllLocation, "FamilyParametersChanger.MainCommandQ")
-            //{
-            //    ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\q-icon.png", UriKind.Absolute)),
-            //    //ToolTipImage = PngImageSource("BatchAddingParameters.res.bap-icon.png"),
-            //    ToolTip = "Позволяет проверить параметры в семействе"
-            //};
-            //PushButton pushButtonQ = panel.AddItem(ButtonDataQ) as PushButton;
-            //pushButtonQ.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\q-icon.png", UriKind.Absolute));
-
-            //PushButtonData ButtonData0 = new PushButtonData("ButtonData0", "Пофиксить\nпараметры", DllLocation, "FamilyParametersChanger.MainCommand0")
-            //{
-            //    ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\sp-icon.png", UriKind.Absolute)),
-            //    //ToolTipImage = PngImageSource("BatchAddingParameters.res.bap-icon.png"),
-            //    ToolTip = "Если есть возможность, то фиксит параметры"
-            //};
-            //PushButton pushButton0 = panel.AddItem(ButtonData0) as PushButton;
-            //pushButton0.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\sp-icon.png", UriKind.Absolute));
-
-            //PushButtonData ButtonData1 = new PushButtonData("ButtonData1", "Перевести\nв обычные", DllLocation, "FamilyParametersChanger.MainCommand1")
-            //{
-            //    ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\fp-icon.png", UriKind.Absolute)),
-            //    //ToolTipImage = PngImageSource("BatchAddingParameters.res.bap-icon.png"),
-            //    ToolTip = "Позволяет перевести неизвестные общие параметры в параметры семейства"
-            //};
-            //PushButton pushButton1 = panel.AddItem(ButtonData1) as PushButton;
-            //pushButton1.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\fp-icon.png", UriKind.Absolute));
-
-            //PushButtonData ButtonData2 = new PushButtonData("ButtonData2", "Перевести\nв общие", DllLocation, "FamilyParametersChanger.MainCommand2")
-            //{
-            //    ToolTipImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\sp-icon.png", UriKind.Absolute)),
-            //    //ToolTipImage = PngImageSource("BatchAddingParameters.res.bap-icon.png"),
-            //    ToolTip = "Позволяет перевести параметры семейства по имени в общие параметры"
-            //};
-            //PushButton pushButton2 = panel.AddItem(ButtonData2) as PushButton;
-            //pushButton2.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\sp-icon.png", UriKind.Absolute));
 
             #endregion
 

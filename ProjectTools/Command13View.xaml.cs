@@ -83,10 +83,10 @@ namespace ProjectTools
             bool wiResult = double.TryParse(vm.WallIndent, out double wi);
             CreateVoidsEventHandler.WallIndent = 2 * wi.ToFeet();
             CreateVoidsEventHandler.CommandData = CommandData;
+            CreateVoidsEventHandler.Window = this;
 
             if (wgResult && wiResult)
             {
-                //Close();
                 CreateVoidsExternalEvent.Raise();
             }
             else MessageBox.Show("неверное значение зазора или отступа");
