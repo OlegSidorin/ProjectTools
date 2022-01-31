@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.UI;
+﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -80,16 +81,40 @@ namespace ProjectTools
             CreateVoidsEventHandler.ViewModel = vm;
             bool wgResult = double.TryParse(vm.WallGap, out double wg);
             CreateVoidsEventHandler.WallGap = 2 * wg.ToFeet();
+            bool fgResult = double.TryParse(vm.FloorGap, out double fg);
+            CreateVoidsEventHandler.FloorGap = 2 * fg.ToFeet();
             bool wiResult = double.TryParse(vm.WallIndent, out double wi);
-            CreateVoidsEventHandler.WallIndent = 2 * wi.ToFeet();
+            CreateVoidsEventHandler.WallIndent = wi.ToFeet();
+            bool fiResult = double.TryParse(vm.FloorIndent, out double fi);
+            CreateVoidsEventHandler.FloorIndent = fi.ToFeet();
+
+            bool maxDResult = double.TryParse(vm.MaxDiameter, out double maxd);
+            CreateVoidsEventHandler.MaxDiameter = maxd.ToFeet();
+            bool minDResult = double.TryParse(vm.MinDiameter, out double mind);
+            CreateVoidsEventHandler.MinDiameter = mind.ToFeet();
+            bool sAngleResult = double.TryParse(vm.StartAngle, out double sAngle);
+            CreateVoidsEventHandler.StartAngle = sAngle * Math.PI / 180;
+            bool maxStopResult = double.TryParse(vm.MaxStopDiameter, out double maxStop);
+            CreateVoidsEventHandler.MaxStopDiameter = maxStop.ToFeet();
+
+            CreateVoidsEventHandler.family_name_hole_walls_round = vm.family_name_hole_walls_round;
+            CreateVoidsEventHandler.family_name_hole_walls_rectang = vm.family_name_hole_walls_rectang;
+            CreateVoidsEventHandler.family_name_hole_floors_round = vm.family_name_hole_floors_round;
+            CreateVoidsEventHandler.family_name_hole_floors_rectang = vm.family_name_hole_floors_rectang;
+            CreateVoidsEventHandler.path_hole_walls_round = vm.path_hole_walls_round;
+            CreateVoidsEventHandler.path_hole_walls_rectang = vm.path_hole_walls_rectang;
+            CreateVoidsEventHandler.path_hole_floors_round = vm.path_hole_floors_round;
+            CreateVoidsEventHandler.path_hole_floors_rectang = vm.path_hole_floors_rectang;
+
             CreateVoidsEventHandler.CommandData = CommandData;
             CreateVoidsEventHandler.Window = this;
 
-            if (wgResult && wiResult)
+
+            if (wgResult && wiResult && fgResult && fiResult && maxDResult && minDResult && sAngleResult && maxStopResult)
             {
                 CreateVoidsExternalEvent.Raise();
             }
-            else MessageBox.Show("неверное значение зазора или отступа");
+            else MessageBox.Show("неверные значения зазора, отступа");
 
         }
     }
