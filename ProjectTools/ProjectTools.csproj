@@ -96,6 +96,9 @@
       <DependentUpon>Command13View.xaml</DependentUpon>
     </Compile>
     <Compile Include="Command13ViewModel.cs" />
+    <Compile Include="Command14a.cs" />
+    <Compile Include="Command14b.cs" />
+    <Compile Include="Command14c.cs" />
     <Compile Include="FilePathViewModel.cs" />
     <Compile Include="FlowDocumentForReport.cs" />
     <Compile Include="FOP.cs" />

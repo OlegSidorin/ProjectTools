@@ -96,13 +96,13 @@
                 <RowDefinition Height="25" />
                 <RowDefinition Height="5" />
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="1" Text="Сем-во прямоугольных отверстий в стене:" FontSize="10" FontWeight="DemiBold"/>
+            <TextBlock Grid.Row="1" Text="Сем-во прямоугольных отверстий в стене:" FontSize="10" FontWeight="DemiBold" VerticalAlignment="Bottom"/>
             <Button Grid.Row="2" Background="Transparent" HorizontalContentAlignment="Left" Padding="5 0 0 0" BorderThickness="0" Command="{Binding Path=ChooseFamily}" CommandParameter="RectangWall">
                 <StackPanel Orientation="Vertical">
                     <TextBlock Text="{Binding Path=family_name_hole_walls_rectang}" />
                 </StackPanel>
             </Button>
-            <TextBlock Grid.Row="4" Text="Сем-во круглых отверстий в стене:" FontSize="10" FontWeight="DemiBold"/>
+            <TextBlock Grid.Row="4" Text="Сем-во круглых отверстий в стене:" FontSize="10" FontWeight="DemiBold" VerticalAlignment="Bottom"/>
             <Button Grid.Row="5" Background="Transparent" HorizontalContentAlignment="Left" Padding="5 0 0 0" BorderThickness="0" Command="{Binding Path=ChooseFamily}" CommandParameter="RoundWall">
                 <StackPanel >
                     <TextBlock Text="{Binding Path=family_name_hole_walls_round}" />
@@ -123,13 +123,13 @@
                 <RowDefinition Height="25" />
                 <RowDefinition Height="5" />
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="1" Text="Сем-во прямоугольных отверстий в полу:" FontSize="10" FontWeight="DemiBold"/>
+            <TextBlock Grid.Row="1" Text="Сем-во прямоугольных отверстий в полу:" FontSize="10" FontWeight="DemiBold" VerticalAlignment="Bottom"/>
             <Button Grid.Row="2" Background="Transparent" HorizontalContentAlignment="Left" Padding="5 0 0 0" BorderThickness="0" Command="{Binding Path=ChooseFamily}" CommandParameter="RectangFloor">
                 <StackPanel Orientation="Vertical">
                     <TextBlock Text="{Binding Path=family_name_hole_floors_rectang}" />
                 </StackPanel>
             </Button>
-            <TextBlock Grid.Row="4" Text="Сем-во круглых отверстий в полу:" FontSize="10" FontWeight="DemiBold"/>
+            <TextBlock Grid.Row="4" Text="Сем-во круглых отверстий в полу:" FontSize="10" FontWeight="DemiBold" VerticalAlignment="Bottom"/>
             <Button Grid.Row="5" Background="Transparent" HorizontalContentAlignment="Left" Padding="5 0 0 0" BorderThickness="0" Command="{Binding Path=ChooseFamily}" CommandParameter="RoundFloor">
                 <StackPanel >
                     <TextBlock Text="{Binding Path=family_name_hole_floors_round}" />

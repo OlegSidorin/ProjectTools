@@ -1823,9 +1823,9 @@ namespace ProjectTools
             using (Transaction docTrans = new Transaction(familyDocument, $"Add family parameters in {familyDocument.Title}"))
             {
                 docTrans.Start();
-
+#if DEBUG
                 MessageBox.Show("редактируем " + familyDocument.Title);
-
+#endif
                 if (familyDocument.IsModifiable)
                 {
 
