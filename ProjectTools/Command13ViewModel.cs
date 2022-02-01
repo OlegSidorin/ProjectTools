@@ -1778,6 +1778,13 @@ namespace ProjectTools
             #endregion
 
 
+            ViewModel.Statusik = $" - прибираемся - ";
+
+            Deleting000Files(path_hole_floors_rectang);
+            Deleting000Files(path_hole_floors_round);
+            Deleting000Files(path_hole_walls_rectang);
+            Deleting000Files(path_hole_walls_round);
+
 
             ViewModel.Statusik = $" - установка всех отверстий завершена - ";
             Window.Close();
@@ -1788,6 +1795,27 @@ namespace ProjectTools
             return "CreateVoids";
         }
 
+
+        private void Deleting000Files(string path)
+        {
+            string rootFolderPath = Path.GetDirectoryName(path);
+            string filesToDelete = @"*.000?.rfa";   // Only delete DOC files containing "DeleteMe" in their filenames
+            string[] fileList = System.IO.Directory.GetFiles(rootFolderPath, filesToDelete);
+            foreach (string file in fileList)
+            {
+                System.Diagnostics.Debug.WriteLine(file + "will be deleted");
+                try
+                {
+                    System.IO.File.Delete(file);
+                }
+                catch (Exception ex)
+                {
+#if DEBUG
+                    MessageBox.Show(ex.ToString());
+#endif
+                }
+            }
+        }
         private string AddFamilyParametersInFamilyDocument(UIApplication uiapp, string path, List<string> paramNames)
         {
             Document familyDocument = uiapp.Application.OpenDocumentFile(path);
@@ -1840,6 +1868,7 @@ namespace ProjectTools
             string newPath = path.Replace(".rfa", "_v1.rfa");
             familyDocument.SaveAs(newPath, new SaveAsOptions() { OverwriteExistingFile = true });
             familyDocument.Close(false);
+
             return newPath;
         }
         private Family LoadFamily(Document doc, string name, string path)
