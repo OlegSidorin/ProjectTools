@@ -63,7 +63,7 @@ namespace ProjectTools
             WorkSetRVTLinksBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\icons8-layers.png", UriKind.Absolute));
 
             panel.AddSeparator();
-
+            
             PulldownButtonData SchemePulldownButtonData = new PulldownButtonData("SchemePulldownButtonData", "Схемы");
             PulldownButton ShemePulldownButton = panel.AddItem(SchemePulldownButtonData) as PulldownButton;
             ShemePulldownButton.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\duct-icon.png", UriKind.Absolute));
@@ -86,7 +86,7 @@ namespace ProjectTools
             NewPipeViewsBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\pipe-icon.png", UriKind.Absolute));
 
             //panel.AddStackedItems(PulldownButtonData, NewPipeViewsBtnData);
-
+            
             panel.AddSeparator();
 
             PulldownButtonData ZeroPulldownButtonData = new PulldownButtonData("ZeroPulldownButtonData", "Рабочие\nплоскости");
@@ -170,7 +170,7 @@ namespace ProjectTools
             };
             var ChangeFloorMaterialBtn = MaterialPulldownButton.AddPushButton(ChangeFloorMaterialBtnData) as PushButton;
             ChangeFloorMaterialBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\floor.png", UriKind.Absolute));
-
+            
             panel.AddSeparator();
             
             var AutoHolesBtnData = new PushButtonData("AutoHolesBtnData", "Расставить\nзаглушки отверстий", DllLocation, "ProjectTools.Command13")
@@ -181,7 +181,7 @@ namespace ProjectTools
             var AutoHolesBtn = panel.AddItem(AutoHolesBtnData) as PushButton;
             AutoHolesBtn.LargeImage = new BitmapImage(new Uri(Path.GetDirectoryName(DllLocation) + "\\res\\holes.png", UriKind.Absolute));
 
-
+            
             #endregion
 
             return Result.Succeeded;
