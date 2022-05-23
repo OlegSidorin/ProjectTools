@@ -129,11 +129,13 @@ namespace ProjectTools
                 {
                     myViewSet.Insert(v3D);
                 }
+                /*
                 foreach (ViewSheet viewSheet in new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>()
                     .Where(q => q.CanBePrinted == true))
                 {
                     myViewSet.Insert(viewSheet);
                 }
+                */
                 PrintManager printManager = doc.PrintManager;
                 printManager.PrintRange = PrintRange.Select;
                 ViewSheetSetting viewSheetSetting = printManager.ViewSheetSetting;
@@ -279,7 +281,7 @@ namespace ProjectTools
                 ttNew.Start();
                 view = View3D.CreateIsometric(doc, viewFamilyType.Id);
                 view.SetOrientation(new ViewOrientation3D(eyePos, upDir, forwardDir));
-                view.Name = "Navisworks";
+                view.Name = "Navisworks(BIM360)";
                 ttNew.Commit();
             }
             return view;

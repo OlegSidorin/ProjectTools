@@ -8,12 +8,17 @@ using System;
 using Autodesk.Revit.DB.Events;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using Autodesk.Revit.ApplicationServices;
 
 namespace ProjectTools
 {
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
     public class Main : IExternalApplication
     {
+        private ControlledApplication m_CtrlApp;
+        //private object m_ChangesInfoTable;
+        //private ChangesInformationForm m_InfoForm;
+
         public static string DllLocation { get; set; }
         public static string DllFolderLocation { get; set; }
         public static string UserFolder { get; set; }
@@ -26,6 +31,24 @@ namespace ProjectTools
             #region Initialize properties
 
             #endregion
+
+
+            m_CtrlApp = application.ControlledApplication;
+            //m_ChangesInfoTable = CreateChangeInfoTable();
+
+            //m_InfoForm = new ChangesInformationForm(
+            //  ChangesInfoTable);
+
+            // register the DocumentChanged event
+
+            m_CtrlApp.DocumentChanged += new EventHandler<
+              Autodesk.Revit.DB.Events.DocumentChangedEventArgs>(
+              CtrlApp_DocumentChanged);
+
+            // show dialog
+
+            //m_InfoForm.Show();
+
 
             RibbonPanel panel = application.CreateRibbonPanel(PanelName);
             DllLocation = Assembly.GetExecutingAssembly().Location;
@@ -186,6 +209,14 @@ namespace ProjectTools
 
             return Result.Succeeded;
         }
+
+        private void CtrlApp_DocumentChanged(object sender, DocumentChangedEventArgs e)
+        {
+            var r = e.GetAddedElementIds();
+            
+            //TaskDialog.Show("Args", "");
+        }
+
         public Result OnShutdown(UIControlledApplication application)
         {
             return Result.Succeeded;
